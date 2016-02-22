@@ -3,6 +3,8 @@
 /log/
 /experiment/log/
 /experiment/solver.jar
+
+/experiment/instances
 /experiment/instances/*/data.*.in
 /experiment/instances/*/data.*.out
 /experiment/plots/
