@@ -159,8 +159,12 @@ public class ScenarioCreator {
 
         List<Agent> agents = new LinkedList<>();
         for (int i=0; i < problem.nAgents(); i++) {
-            agents.add(i, new Agent(i, problem.getStart(i).toPoint2d(),
-                    problem.getTarget(i).toPoint2d(), problem.getBodyRadius(i)));
+            agents.add(i,
+                    new Agent(i,
+                        problem.getStart(i).toPoint2d(),
+                        problem.getTarget(i).toPoint2d(),
+                        problem.getBodyRadius(i),
+                        problem.getMaxSpeed(i)));
         }
 
 		// simulate execution
@@ -179,46 +183,40 @@ public class ScenarioCreator {
 //        }, params);
     }    
 
-    interface AgentFactory {
-		Agent createAgent(String name, int priority, Point start,
-				int nTasks, Environment env, DirectedGraph<Point, Line> planningGraph, int agentBodyRadius,
-				float speed);
-    }
-
     private static void simulate(final EarliestArrivalProblem problem, List<Agent> agents, final Parameters params) {
     	
     	simulationStartedAt = System.currentTimeMillis();
         initAgentVisualization(agents, params.timeStep);
 
-        int SIMULATION_STEP_MS = 1000;
+        int SIMULATION_STEP_MS = 100;
         int simulatedTimeMs = 0;
         while (!allDone(agents)){
             simulatedTimeMs += SIMULATION_STEP_MS;
 
             for (Agent agent: agents){
-                agent.tick(simulatedTimeMs);
+                agent.tick(simulatedTimeMs, SIMULATION_STEP_MS);
             }
 
             try {
-                Thread.sleep(SIMULATION_STEP_MS);
+                Thread.sleep(SIMULATION_STEP_MS/10);
             } catch (InterruptedException e) {}
         }
 
-    	long baseSum = 0;
-    	long baseSumSq = 0;
+    	long sum = 0;
+    	long sumSq = 0;
 
         for (Agent agent : agents) {
-        	baseSum +=  agent.goalReachedSum;
-        	baseSumSq += agent.goalReachedSumSq;
+        	sum +=  agent.goalReachedSum;
+        	sumSq += agent.goalReachedSumSq;
 		}
         
-        long n = agents.size() * params.nTasks;
+        long n = agents.size();
         
-        long avgBase = avg(baseSum, n);
-        long varBase = sd(baseSumSq, avgBase, n);
+        long avgGoalReachedTime = avg(sum, n);
+        long varGoalReachedTime = sd(sumSq, avgGoalReachedTime, n);
         // avgBase;varBase;avgWait;varWait;avgPlan;varPlan;avgPWindow;varPWindow;avgProlongT;varProlongT;avgProlongR;varProlongR;makespan
 
-		printSummary(params.summaryPrefix, Status.SUCCESS, avgBase,varBase);
+		printSummary(params.summaryPrefix, Status.SUCCESS, avgGoalReachedTime, varGoalReachedTime);
     }
     
     private static boolean allDone(List<Agent> agents) {
