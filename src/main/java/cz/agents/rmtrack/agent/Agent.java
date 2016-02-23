@@ -1,19 +1,24 @@
 package cz.agents.rmtrack.agent;
 
+import cz.agents.rmtrack.util.Disturbance;
 import org.apache.log4j.Logger;
 import tt.euclid2d.Point;
 import tt.euclid2d.Vector;
+
+import java.util.List;
 
 
 public abstract class Agent {
 
     static final Logger LOGGER = Logger.getLogger(Agent.class);
-    int id;
 
+    int id;
     Point start;
     Point goal;
     float radius;
-    private final float maxSpeed;
+    final float maxSpeed;
+    final Disturbance disturbance;
+
 
     boolean isDone = false;
 
@@ -21,26 +26,16 @@ public abstract class Agent {
 	public long goalReachedSum = 0;
 	public long goalReachedSumSq = 0;
 
-    public Agent(int id, Point start, Point goal, float radius, float maxSpeed) {
+    public Agent(int id, Point start, Point goal, float radius, float maxSpeed, Disturbance disturbance) {
         this.id = id;
         this.start = start;
         this.goal = goal;
         this.radius = radius;
         this.maxSpeed = maxSpeed;
+        this.disturbance = disturbance;
     }
 
-    public void tick(int timeMs, int deltaMs) {
-    	//LOGGER.info(getName() + " Tick @ " + timeMs/1000.0 + "s");
-        if (!isDone) {
-            final int EPS = 10;
-            if (getPosition().distance(goal) < EPS) {
-                isDone = true;
-                goalReachedSum = timeMs;
-                goalReachedSumSq = (long) timeMs * (long) timeMs;
-                LOGGER.info("finished at time: " + timeMs/1000);
-            }
-        }
-    }
+    abstract public void update(int t_current_ms, int t_next_ms, List<Agent> agents);
 
     public String getName() {
         return "" + id;
@@ -58,5 +53,15 @@ public abstract class Agent {
 
     public float getMaxSpeed() {
         return maxSpeed;
+    }
+
+    public Disturbance getDisturbance() {
+        return disturbance;
+    }
+
+    public abstract boolean isCurrentlyDisturbed();
+
+    boolean isDisturbed(int t){
+        return disturbance.isDisturbed(id, t);
     }
 }

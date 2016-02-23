@@ -50,7 +50,7 @@ import tt.vis.TimeParameterHolder;
 public class BestResponse {
 
     private final static Logger LOGGER = Logger.getLogger(BestResponse.class);
-	private static final boolean DEBUG_VIS = true;
+	private static final boolean DEBUG_VIS = false;
 
 	public static EvaluatedTrajectory computeBestResponse(final Point start,
 														  final Point goal,

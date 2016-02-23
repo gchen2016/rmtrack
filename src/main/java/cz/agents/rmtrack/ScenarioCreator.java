@@ -3,6 +3,7 @@ import cz.agents.alite.vis.VisManager;
 import cz.agents.alite.vis.layer.toggle.KeyToggleLayer;
 import cz.agents.rmtrack.agent.Agent;
 import cz.agents.rmtrack.agent.RMTrackAgent;
+import cz.agents.rmtrack.util.Disturbance;
 import org.apache.log4j.Logger;
 import tt.euclid2i.EvaluatedTrajectory;
 import tt.euclid2i.Trajectory;
@@ -72,6 +73,13 @@ public class ScenarioCreator {
         String bgImgFileName = Args.getArgumentValue(args, "-bgimg", false, null);
         String simSpeedStr = Args.getArgumentValue(args, "-simspeed", false, "1");
         params.simSpeed = Double.parseDouble(simSpeedStr);
+
+        String disturbanceProbStr = Args.getArgumentValue(args, "-dprob", false, "0.1");
+        params.disturbanceProb = Double.parseDouble(disturbanceProbStr);
+
+        String disturbanceSeedStr = Args.getArgumentValue(args, "-dseed", false, "1");
+        params.disturbanceSeed = Integer.parseInt(disturbanceSeedStr);
+
         String seedStr = Args.getArgumentValue(args, "-seed", true);
     	params.random = new Random(Integer.parseInt(seedStr));
     	
@@ -127,11 +135,13 @@ public class ScenarioCreator {
             VisUtil.initVisualization(problem, "Trajectory Tools ("+method.toString()+")", params.bgImageFile, params.timeStep/2);
             VisUtil.visualizeEarliestArrivalProblem(problem);
         }
+
+        Disturbance disturbance = new Disturbance((float) params.disturbanceProb, 1000, params.disturbanceSeed, problem.nAgents());
         
         switch (method) {
         
 			case RMTRACK:
-	            solveRMTrack(problem, params);
+	            solveRMTrack(problem, disturbance, params);
 	            break;
 
 	        case ORCA:
@@ -144,7 +154,7 @@ public class ScenarioCreator {
         }
     }
 
-	private static void solveRMTrack(final EarliestArrivalProblem problem, final Parameters params) {
+	private static void solveRMTrack(final EarliestArrivalProblem problem, Disturbance disturbance, final Parameters params) {
 
         // find trajectories
         final EvaluatedTrajectory[] trajs = RPP.solve(problem, params.timeStep, params.maxTime);
@@ -157,7 +167,8 @@ public class ScenarioCreator {
                         problem.getTarget(i).toPoint2d(),
                         problem.getBodyRadius(i),
                         problem.getMaxSpeed(i),
-                        trajs[i]));
+                        trajs[i],
+                        disturbance));
         }
 
 		// simulate execution
@@ -187,11 +198,11 @@ public class ScenarioCreator {
             simulatedTimeMs += SIMULATION_STEP_MS;
 
             for (Agent agent: agents){
-                agent.tick(simulatedTimeMs, SIMULATION_STEP_MS);
+                agent.update(simulatedTimeMs, simulatedTimeMs+SIMULATION_STEP_MS, agents);
             }
 
             try {
-                Thread.sleep(SIMULATION_STEP_MS/1);
+                Thread.sleep(SIMULATION_STEP_MS);
             } catch (InterruptedException e) {}
         }
 
@@ -257,9 +268,15 @@ public class ScenarioCreator {
                  LinkedList<LabeledCircleLayer.LabeledCircle<tt.euclid2d.Point>> list = new LinkedList<LabeledCircleLayer.LabeledCircle<tt.euclid2d.Point>>();
                  for (int i = 0; i < agents.size(); i++) {
                      tt.euclid2d.Point pos = agents.get(i).getPosition();
+
+                     Color fillColor = AgentColors.getColorForAgent(i);
+                     if (agents.get(i).isCurrentlyDisturbed()) {
+                         fillColor = Color.black;
+                     }
+
                 	 list.add(new LabeledCircleLayer.LabeledCircle<tt.euclid2d.Point>(pos,
                              (int) agents.get(i).getRadius(), "" + i  , AgentColors.getColorForAgent(i),
-                             AgentColors.getColorForAgent(i),
+                             fillColor ,
                              Color.WHITE));
                  }
 
