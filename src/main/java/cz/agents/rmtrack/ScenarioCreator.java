@@ -193,8 +193,9 @@ public class ScenarioCreator {
         initAgentVisualization(agents, params.timeStep);
 
         int SIMULATION_STEP_MS = 100;
+        int SIMULATE_UNTIL = 600000;
         int simulatedTimeMs = 0;
-        while (!allDone(agents)){
+        while (!allDone(agents) && simulatedTimeMs < SIMULATE_UNTIL){
             simulatedTimeMs += SIMULATION_STEP_MS;
 
             for (Agent agent: agents){
@@ -202,7 +203,7 @@ public class ScenarioCreator {
             }
 
             try {
-                Thread.sleep(SIMULATION_STEP_MS);
+                Thread.sleep(/*SIMULATION_STEP_MS*/ 1);
             } catch (InterruptedException e) {}
         }
 
