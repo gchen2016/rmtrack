@@ -11,6 +11,7 @@ import tt.euclidtime3i.ShortestPathHeuristic;
 import tt.euclidtime3i.region.MovingCircle;
 import tt.jointeuclid2ni.probleminstance.EarliestArrivalProblem;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedList;
 
@@ -29,22 +30,36 @@ public class RPP {
 
             for (int j = 0; j < problem.nAgents(); j++) {
                 if (j < i) {
-                    dObst.add(new MovingCircle(trajs[j], problem.getBodyRadius(i) + problem.getBodyRadius(j) + RADIUS_GRACE));
+                    int samplingInterval = timeStep/2;
+                    dObst.add(new MovingCircle(trajs[j], problem.getBodyRadius(i) + problem.getBodyRadius(j), samplingInterval));
                 } else if (j > i) {
-                    sObst.add(new Circle(problem.getStart(j), problem.getBodyRadius(i) + problem.getBodyRadius(j) + RADIUS_GRACE));
+                    sObst.add(new Circle(problem.getStart(j), problem.getBodyRadius(i) + problem.getBodyRadius(j)));
                 }
             }
 
-            HeuristicToGoal<Point> heuristic = new ShortestPathHeuristic(problem.getPlanningGraph(), problem.getTarget(i));
-            trajs[i] = BestResponse.computeBestResponse(
+            LOGGER.info("Computing trajectory for robot " + i);
+            EvaluatedTrajectory traj = BestResponse.computeBestResponse(
                     problem.getStart(i),
                     problem.getTarget(i),
+                    problem.getMaxSpeed(i),
                     problem.getPlanningGraph(),
-                    heuristic,
                     sObst,
                     dObst,
                     maxTime,
                     timeStep);
+
+            try {
+                System.in.read();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            if (traj == null) {
+                LOGGER.error("===== PATH PLANNING FOR ROBOT " + i + "FAILED =====");
+                break;
+            } else {
+                trajs[i] = traj;
+            }
 
         }
 

@@ -34,7 +34,7 @@ public class Agent {
     public void tick(int timeMs, int deltaMs) {
     	//LOGGER.info(getName() + " Tick @ " + timeMs/1000.0 + "s");
         if (!isDone) {
-            Vector dpos = getVelocity();
+            Vector dpos = getVelocity(timeMs);
             dpos.scale((double) deltaMs);
             position.add(dpos);
 
@@ -52,10 +52,12 @@ public class Agent {
         return "" + id;
     }
 
-    public Vector getVelocity() {
+    public Vector getVelocity(int timeMs) {
         Vector vel = new Vector(goal);
         vel.sub(position);
-        vel.normalize();
+        if (vel.length() > 0.0001) {
+            vel.normalize();
+        }
         vel.scale(maxSpeed);
         return vel;
     }
@@ -70,5 +72,9 @@ public class Agent {
 
     public float getRadius() {
         return radius;
+    }
+
+    public float getMaxSpeed() {
+        return maxSpeed;
     }
 }

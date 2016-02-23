@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.util.Collection;
 import java.util.Random;
 
+import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
@@ -14,6 +15,7 @@ import org.jgrapht.util.HeuristicToGoal;
 
 import cz.agents.alite.vis.VisManager;
 import cz.agents.alite.vis.layer.VisLayer;
+import org.jgrapht.util.heuristics.PerfectHeuristic;
 import tt.euclid2i.EvaluatedTrajectory;
 import tt.euclid2i.Line;
 import tt.euclid2i.Point;
@@ -47,17 +49,29 @@ import tt.vis.TimeParameterHolder;
 
 public class BestResponse {
 
-	private static final boolean DEBUG_VIS = false;
+    private final static Logger LOGGER = Logger.getLogger(BestResponse.class);
+	private static final boolean DEBUG_VIS = true;
 
 	public static EvaluatedTrajectory computeBestResponse(final Point start,
 														  final Point goal,
+                                                          final float maxSpeed,
 														  final DirectedGraph<tt.euclid2i.Point, tt.euclid2i.Line> spatialGraph,
-														  final HeuristicToGoal<tt.euclidtime3i.Point> heuristic,
 														  final Collection<tt.euclid2i.Region> staticObstacles,
-														  final Collection<tt.euclidtime3i.Region> dynamicObstacles, final int maxTime, final int timeStep) {
+														  final Collection<tt.euclidtime3i.Region> dynamicObstacles,
+                                                          final int maxTime, final int timeStep) {
 
-		final ObstacleWrapper<tt.euclid2i.Point, tt.euclid2i.Line> adaptedSpatialGraph
-				= new ObstacleWrapper<tt.euclid2i.Point, tt.euclid2i.Line>(spatialGraph, staticObstacles);
+        ObstacleWrapper<tt.euclid2i.Point, tt.euclid2i.Line> adaptedSpatialGraph
+                = new ObstacleWrapper<tt.euclid2i.Point, tt.euclid2i.Line>(spatialGraph, staticObstacles);
+
+        DirectedGraph<Point, Line> explicitSpatialGraph = adaptedSpatialGraph.generateFullGraph(start);
+
+        final HeuristicToGoal<tt.euclid2i.Point> spatialHeuristic = new PerfectHeuristic<Point, Line>(explicitSpatialGraph, goal);
+        final HeuristicToGoal<tt.euclidtime3i.Point> spaceTimeHeuristic = new HeuristicToGoal<tt.euclidtime3i.Point>() {
+            @Override
+            public double getCostToGoalEstimate(tt.euclidtime3i.Point current) {
+                return spatialHeuristic.getCostToGoalEstimate(current.getPosition()) / (double) maxSpeed;
+            }
+        };
 
 		VisLayer graphLayer;
 		VisLayer sobstLayer;
@@ -70,10 +84,10 @@ public class BestResponse {
 					new GraphLayer.GraphProvider<tt.euclid2i.Point, tt.euclid2i.Line>() {
 						@Override
 						public Graph<tt.euclid2i.Point, tt.euclid2i.Line> getGraph() {
-							return ((ObstacleWrapper<Point, Line>) adaptedSpatialGraph).generateFullGraph(start);
+							return explicitSpatialGraph;
 						}
-					}, new tt.euclid2i.vis.ProjectionTo2d(), Color.BLUE,
-					Color.BLUE, 1, 4);
+					}, new tt.euclid2i.vis.ProjectionTo2d(), Color.CYAN,
+					Color.CYAN, 1, 4);
 
 			sobstLayer = RegionsLayer.create(new tt.euclid2i.vis.RegionsLayer.RegionsProvider() {
 				@Override
@@ -98,27 +112,30 @@ public class BestResponse {
 			// --- debug visio --- end
 		}
 
-
 		// time-extension
-		DirectedGraph<tt.euclidtime3i.Point, Straight> graph
-				= new ConstantSpeedTimeExtension(adaptedSpatialGraph, maxTime, new int[]{1}, dynamicObstacles, timeStep, timeStep);
+		DirectedGraph<tt.euclidtime3i.Point, Straight> motions
+				= new ConstantSpeedTimeExtension(explicitSpatialGraph, maxTime, new float[]{maxSpeed}, dynamicObstacles, timeStep, timeStep);
 
-		graph = new FreeOnTargetWaitExtension(graph, goal);
+		motions = new FreeOnTargetWaitExtension(motions, goal);
+		motions = new ControlEffortWrapper(motions, 0.01);
 
-		graph = new ControlEffortWrapper(graph, 0.01);
+        Goal<tt.euclidtime3i.Point> goalCond = new Goal<tt.euclidtime3i.Point>() {
+            @Override
+            public boolean isGoal(tt.euclidtime3i.Point current) {
+                return current.getPosition().equals(goal) && current.getTime() > (maxTime - timeStep - 1); // last space-time node might not be placed at MAX_TIME
+            }
+        };
+        AStarShortestPathSimple<tt.euclidtime3i.Point, Straight> astar
+                = new AStarShortestPathSimple<>(motions, spaceTimeHeuristic, new tt.euclidtime3i.Point(start, 0), goalCond);
 
-		// plan
-		final GraphPath<tt.euclidtime3i.Point, Straight> path = AStarShortestPathSimple.findPathBetween(graph,
-				heuristic,
-				new tt.euclidtime3i.Point(start.x, start.y, 0),
-				new Goal<tt.euclidtime3i.Point>() {
-					@Override
-					public boolean isGoal(tt.euclidtime3i.Point current) {
-						return current.getPosition().equals(goal)
-								&& current.getTime() > (maxTime - timeStep - 1); // last space-time node might not be placed at MAX_TIME
-					}
-				});
+        long startedAt = System.currentTimeMillis();
+        GraphPath<tt.euclidtime3i.Point, Straight> path = astar.findPathRuntimeLimit(Integer.MAX_VALUE, Integer.MAX_VALUE);
 
+        long runtime = System.currentTimeMillis() - startedAt;
+        LOGGER.debug("Planning finshed in " + runtime + "ms; "
+                + astar.getIterationCount() + " iterations; "
+                + (int) (astar.getIterationCount() / (runtime / 1000.0)) + " it/sec "
+                + " path-length:" + ((path != null) ? path.getEdgeList().size() : "NONE"));
 
 		if (path != null) {
 			if (DEBUG_VIS) {

@@ -1,23 +1,11 @@
 package cz.agents.rmtrack;
-import java.awt.Color;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.text.DecimalFormat;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
+import cz.agents.alite.vis.VisManager;
+import cz.agents.alite.vis.layer.toggle.KeyToggleLayer;
+import cz.agents.rmtrack.agent.Agent;
+import cz.agents.rmtrack.agent.RMTrackAgent;
 import org.apache.log4j.Logger;
-import org.jgrapht.DirectedGraph;
-
 import tt.euclid2i.EvaluatedTrajectory;
-import tt.euclid2i.Line;
-import tt.euclid2i.Point;
 import tt.euclid2i.Trajectory;
-import tt.euclid2i.probleminstance.Environment;
 import tt.jointeuclid2ni.probleminstance.EarliestArrivalProblem;
 import tt.jointeuclid2ni.probleminstance.TrajectoryCoordinationProblemXMLDeserializer;
 import tt.jointeuclid2ni.probleminstance.VisUtil;
@@ -28,11 +16,15 @@ import tt.vis.FastTrajectoriesLayer;
 import tt.vis.FastTrajectoriesLayer.ColorProvider;
 import tt.vis.FastTrajectoriesLayer.TrajectoriesProvider;
 import tt.vis.LabeledCircleLayer;
-import cz.agents.alite.simulation.vis.SimulationControlLayer;
-import cz.agents.alite.simulation.vis.SimulationControlLayer.SimulationControlProvider;
-import cz.agents.alite.vis.VisManager;
-import cz.agents.alite.vis.layer.toggle.KeyToggleLayer;
-import cz.agents.rmtrack.agent.Agent;
+
+import java.awt.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Random;
 
 
 public class ScenarioCreator {
@@ -132,7 +124,7 @@ public class ScenarioCreator {
 	public static void create(EarliestArrivalProblem problem, Method method, final Parameters params) {
 		
         if (params.showVis) {
-            VisUtil.initVisualization(problem.getEnvironment(), "Trajectory Tools ("+method.toString()+")", params.bgImageFile, params.timeStep/2);
+            VisUtil.initVisualization(problem, "Trajectory Tools ("+method.toString()+")", params.bgImageFile, params.timeStep/2);
             VisUtil.visualizeEarliestArrivalProblem(problem);
         }
         
@@ -160,11 +152,12 @@ public class ScenarioCreator {
         List<Agent> agents = new LinkedList<>();
         for (int i=0; i < problem.nAgents(); i++) {
             agents.add(i,
-                    new Agent(i,
+                    new RMTrackAgent(i,
                         problem.getStart(i).toPoint2d(),
                         problem.getTarget(i).toPoint2d(),
                         problem.getBodyRadius(i),
-                        problem.getMaxSpeed(i)));
+                        problem.getMaxSpeed(i),
+                        trajs[i]));
         }
 
 		// simulate execution
@@ -198,7 +191,7 @@ public class ScenarioCreator {
             }
 
             try {
-                Thread.sleep(SIMULATION_STEP_MS/10);
+                Thread.sleep(SIMULATION_STEP_MS/1);
             } catch (InterruptedException e) {}
         }
 
@@ -231,25 +224,28 @@ public class ScenarioCreator {
 	private static void initAgentVisualization(final List<Agent> agents, int timeStep) {
         // trajectories
         VisManager.registerLayer(
-    		KeyToggleLayer.create("t", true, 
-		        FastTrajectoriesLayer.create(new TrajectoriesProvider() {
-					
-					@Override
-					public Trajectory[] getTrajectories() {
-						Trajectory[] trajsArr = new Trajectory[agents.size()];
+                KeyToggleLayer.create("t", true,
+                        FastTrajectoriesLayer.create(new TrajectoriesProvider() {
 
-                        for (int i = 0; i < trajsArr.length; i++) {
-							//trajsArr[i] = agents.get(i).getCurrentTrajectory();
-						}
-						return trajsArr;
-					}
-				},new ColorProvider() {
-					
-					@Override
-					public Color getColor(int i) {
-						return AgentColors.getColorForAgent(i);
-					}
-				}, 3, timeStep)));
+                            @Override
+                            public Trajectory[] getTrajectories() {
+                                Trajectory[] trajsArr = new Trajectory[agents.size()];
+
+                                for (int i = 0; i < trajsArr.length; i++) {
+                                    Agent agent = agents.get(i);
+                                    if (agent instanceof RMTrackAgent) {
+                                        trajsArr[i] = ((RMTrackAgent) agent).getTrajectory();
+                                    }
+                                }
+                                return trajsArr;
+                            }
+                        },new ColorProvider() {
+
+                            @Override
+                            public Color getColor(int i) {
+                                return AgentColors.getColorForAgent(i);
+                            }
+                        }, 3, timeStep)));
 		
         // positions
         VisManager.registerLayer(
