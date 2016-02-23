@@ -12,6 +12,7 @@ public class RMTrackAgent extends Agent {
 
     private int planPos = 0;
     private boolean currentlyDisturbed = false;
+    private boolean currentlyWaiting = false;
 
     public RMTrackAgent(int id, tt.euclid2d.Point start, tt.euclid2d.Point goal, float radius, float maxSpeed,
                         Trajectory traj, Disturbance disturbance) {
@@ -32,8 +33,38 @@ public class RMTrackAgent extends Agent {
         } else {
             currentlyDisturbed = false;
             int deltaT = t_next_ms - t_current_ms;
-            planPos += deltaT;
+
+            boolean proceed = true;
+            for (int j=0; j<agents.size(); j++) {
+                if (j != id) {
+                    RMTrackAgent otherAgent = (RMTrackAgent) agents.get(j);
+                    if (this.getPlanPos() > otherAgent.getPlanPos()) {
+                        if (spatialCollision(this.getTrajectory(), this.getPlanPos(), this.getPlanPos() + deltaT,
+                                otherAgent.getTrajectory(), otherAgent.getPlanPos(), this.getPlanPos() + deltaT,
+                                deltaT/2, (int) (this.getRadius() + otherAgent.getRadius()))) {
+                            proceed = false;
+                        }
+                    }
+                }
+            }
+
+            if (proceed) {
+                planPos += deltaT;
+            }
+            currentlyWaiting = !proceed;
         }
+    }
+
+    private boolean spatialCollision(Trajectory traj1, int start1 , int end1, Trajectory traj2, int start2, int end2, int sampling, int separation) {
+        for (int t1 = start1; t1 < end1; t1 += sampling) {
+            for (int t2 = start2; t2 < end2; t2 += sampling ) {
+                if (traj1.get(t1).distance(traj2.get(t2)) < separation) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public Trajectory getTrajectory() {
@@ -43,5 +74,13 @@ public class RMTrackAgent extends Agent {
     @Override
     public boolean isCurrentlyDisturbed() {
         return currentlyDisturbed;
+    }
+
+    public int getPlanPos() {
+        return planPos;
+    }
+
+    public boolean isCurrentlyWaiting() {
+        return currentlyWaiting;
     }
 }

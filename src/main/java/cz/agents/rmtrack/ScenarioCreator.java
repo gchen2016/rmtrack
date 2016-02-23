@@ -274,10 +274,19 @@ public class ScenarioCreator {
                          fillColor = Color.black;
                      }
 
+                     Color textColor = Color.WHITE;
+
+                     if (agents.get(i) instanceof RMTrackAgent) {
+                         RMTrackAgent agent = (RMTrackAgent) agents.get(i);
+                         if (agent.isCurrentlyWaiting()) {
+                             textColor = Color.DARK_GRAY;
+                         }
+                     }
+
                 	 list.add(new LabeledCircleLayer.LabeledCircle<tt.euclid2d.Point>(pos,
                              (int) agents.get(i).getRadius(), "" + i  , AgentColors.getColorForAgent(i),
                              fillColor ,
-                             Color.WHITE));
+                             textColor));
                  }
 
                  return list;
