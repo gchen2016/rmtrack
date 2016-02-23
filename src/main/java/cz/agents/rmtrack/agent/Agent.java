@@ -5,14 +5,13 @@ import tt.euclid2d.Point;
 import tt.euclid2d.Vector;
 
 
-public class Agent {
+public abstract class Agent {
 
     static final Logger LOGGER = Logger.getLogger(Agent.class);
     int id;
 
     Point start;
     Point goal;
-    Point position;
     float radius;
     private final float maxSpeed;
 
@@ -26,7 +25,6 @@ public class Agent {
         this.id = id;
         this.start = start;
         this.goal = goal;
-        this.position = new Point(start);
         this.radius = radius;
         this.maxSpeed = maxSpeed;
     }
@@ -34,12 +32,8 @@ public class Agent {
     public void tick(int timeMs, int deltaMs) {
     	//LOGGER.info(getName() + " Tick @ " + timeMs/1000.0 + "s");
         if (!isDone) {
-            Vector dpos = getVelocity(timeMs);
-            dpos.scale((double) deltaMs);
-            position.add(dpos);
-
             final int EPS = 10;
-            if (position.distance(goal) < EPS) {
+            if (getPosition().distance(goal) < EPS) {
                 isDone = true;
                 goalReachedSum = timeMs;
                 goalReachedSumSq = (long) timeMs * (long) timeMs;
@@ -52,23 +46,11 @@ public class Agent {
         return "" + id;
     }
 
-    public Vector getVelocity(int timeMs) {
-        Vector vel = new Vector(goal);
-        vel.sub(position);
-        if (vel.length() > 0.0001) {
-            vel.normalize();
-        }
-        vel.scale(maxSpeed);
-        return vel;
-    }
-
     public boolean isDone() {
         return isDone;
     }
 
-    public Point getPosition() {
-        return position;
-    }
+    abstract public Point getPosition();
 
     public float getRadius() {
         return radius;

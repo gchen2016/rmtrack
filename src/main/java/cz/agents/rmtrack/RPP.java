@@ -37,7 +37,7 @@ public class RPP {
                 }
             }
 
-            LOGGER.info("Computing trajectory for robot " + i);
+            LOGGER.info("Computing trajectory for robot " + i + " from " + problem.getStart(i) + " to " + problem.getTarget(i));
             EvaluatedTrajectory traj = BestResponse.computeBestResponse(
                     problem.getStart(i),
                     problem.getTarget(i),
@@ -47,12 +47,6 @@ public class RPP {
                     dObst,
                     maxTime,
                     timeStep);
-
-            try {
-                System.in.read();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
 
             if (traj == null) {
                 LOGGER.error("===== PATH PLANNING FOR ROBOT " + i + "FAILED =====");

@@ -6,26 +6,23 @@ import tt.euclid2i.Trajectory;
 
 public class RMTrackAgent extends Agent {
     private final Trajectory traj;
+    private tt.euclid2i.Point position;
 
     public RMTrackAgent(int id, tt.euclid2d.Point start, tt.euclid2d.Point goal, float radius, float maxSpeed, Trajectory traj) {
         super(id, start, goal, radius, maxSpeed);
-
+        this.position = start.toPoint2i();
         this.traj = traj;
     }
 
     @Override
-    public Vector getVelocity(int timeMs) {
-        int LOOKAHEAD = 500;
-        tt.euclid2i.Point carrot = traj.get(timeMs + LOOKAHEAD);
+    public Point getPosition() {
+        return this.position.toPoint2d();
+    }
 
-        Vector diff = new tt.euclid2d.Vector(carrot.toPoint2d());
-        diff.sub(getPosition());
-        if (diff.length() > 0.0001) {
-            diff.normalize();
-        }
-        diff.scale(getMaxSpeed());
-
-        return diff;
+    @Override
+    public void tick(int timeMs, int deltaMs) {
+        super.tick(timeMs, deltaMs);
+        position = traj.get(timeMs);
     }
 
     public Trajectory getTrajectory() {
