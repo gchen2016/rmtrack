@@ -5,19 +5,25 @@ This repository contains an implementation of COBRA algorithm and the dataset us
 
 M. Čáp, J. Vokřínek, and A. Kleiner, “Complete decentralized method for on-line multi-robot trajectory planning in valid infrastructures,” in International conference on planning and scheduling, ICAPS 2015, 2015.
 
+1. Dependencies:
+----------------
 
-1. Recomputing the whole experiment:
---------------------------------
+To run the experiment and process the data, you need GNU parallel, R and other dependencies. In Ubuntu run:
+
+sudo apt-get install parallel r-cran-plyr r-cran-ggplot2
+
+2. Recomputing the whole experiment:
+-----------------------------------
 
 To recompute the entire experiment, run the following command:
 
 $./run-experiment.sh
 
 
-2. Executing single simulation run:
+3. Executing single simulation run:
 -----------------------------------
 
-2.1 Compiling
+3.1 Compiling
 ---------
 The dependencies are managed using Maven. To compile the project and create a jar archive with dependencies run:	
 
@@ -29,7 +35,7 @@ target/map4rt-1.0-SNAPSHOT-jar-with-dependencies.jar
 
 Alternatively, you can open the project in your favorite IDE, i.e. in Eclipse.
 
-2.2 Getting started
+3.2 Getting started
 ---------------
 
 A simulation is run by executing cz.agents.rmtrack.ScenarioCreator class.
@@ -53,7 +59,7 @@ The following command will run the COBRA on the example problem instance describ
 
 $java -jar target/map4rt-1.0-SNAPSHOT-jar-with-dependencies.jar cz.agents.rmtrack.creator.ScenarioCreator -method COBRA -problemfile experiment/instances/ubremen-r27/28.xml -ntasks 4 -timestep 650 -maxtime 600000 -timeout 600000 -seed 8 -showvis
 
-2.3 Visualization control: 
+3.3 Visualization control: 
 ----------------------
 
 When the visualization window pops-up, use the following keys to toggle various useful visualization layers:

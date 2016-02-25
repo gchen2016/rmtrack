@@ -19,7 +19,7 @@ function generate_instance_set {
     instance=0
     for nagents in $agents
     do
-        for seed in {1..10}
+        for seed in {1..5}
         do
             let instance=instance+1
             # create a problem instance file
@@ -29,23 +29,26 @@ function generate_instance_set {
             ## ConflictGenerator
             java -XX:+UseSerialGC -cp solver.jar -Dlog4j.configuration="file:$PWD/log4j.custom" tt.jointeuclid2ni.probleminstance.generator.GenerateEAInstance -env $denvxml -nagents $nagents -radius $radius -maxspeed $maxspeed -seed $seed -sgnooverlap -outfile $instancefile
 
-            algs="ORCA RMTRACK"
+            algs="ALLSTOP RMTRACK"
 
             for alg in $algs
             do
-                summaryprefix="$envname;$instance;$nagents;$radius;$seed;$timestep;$maxtime;$alg;"
-                echo -method $alg -problemfile $instancefile -ntasks $ntasks -timestep $timestep -maxtime $maxtime -timeout $maxtime -seed $seed -summaryprefix "$summaryprefix" >> $instancefolder/data.in
+                for dprob in 0 2 6 8 10 15 30
+                do
+                    summaryprefix="$instance;$nagents;$radius;$seed;$timestep;$maxtime;$alg;"
+                    echo -method $alg -problemfile $instancefile -timestep $timestep -maxtime $maxtime -timeout $maxtime -dseed 1 -dprob $dprob -dquant 1000 -summaryprefix "$summaryprefix" >> $instancefolder/data.in
+                done
             done
 
             echo Finished instance no $instance. Agents: $nagents. Seed: $seed.
         done
     done
-    echo "env;instance;nagents;radius;seed;timestep;maxtime;alg;status;disturbance;sumtime;" > $instancefolder/head
+    echo "instance;nagents;radius;seed;timestep;maxtime;alg;status;dprob;dquant;dseed;avgBase;avgTravel;avgProlong;varProlong;makespanAbs;makespanRel;" > $instancefolder/head
     echo Done. Created $instance instances at $envname environment. Instances stored in $instancefolder.
 }
 
 # ubremen
-generate_instance_set d-envs/ubremen-r27-docks.xml instances/ubremen-r27 27 65 600000 "1 10 35"
+generate_instance_set d-envs/ubremen-r27-docks.xml instances/ubremen-r27 27 65 600000 "10" # up to 35
 
 # warehouse
 #generate_instance_set d-envs/warehouse-r25-docks.xml instances/warehouse-r25 25 54 600000 "1 10 50"

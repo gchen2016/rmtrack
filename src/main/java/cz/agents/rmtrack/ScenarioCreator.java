@@ -75,8 +75,8 @@ public class ScenarioCreator {
         String simSpeedStr = Args.getArgumentValue(args, "-simspeed", false, "1");
         params.simSpeed = Double.parseDouble(simSpeedStr);
 
-        String disturbanceProbStr = Args.getArgumentValue(args, "-dprob", false, "0.1");
-        params.disturbanceProb = Double.parseDouble(disturbanceProbStr);
+        String disturbanceProbStr = Args.getArgumentValue(args, "-dprob", false, "10");
+        params.disturbanceProb = Double.parseDouble(disturbanceProbStr) / 100;
 
         String disturbanceSeedStr = Args.getArgumentValue(args, "-dseed", false, "1");
         params.disturbanceSeed = Integer.parseInt(disturbanceSeedStr);
@@ -84,9 +84,6 @@ public class ScenarioCreator {
         String disturbanceQuantStr = Args.getArgumentValue(args, "-dquant", false, "1000");
         params.disturbanceQuantum = Integer.parseInt(disturbanceQuantStr);
 
-        String seedStr = Args.getArgumentValue(args, "-seed", true);
-    	params.random = new Random(Integer.parseInt(seedStr));
-    	
 		File file = new File(xml);
 	    params.fileName = file.getName();
 	    
@@ -254,6 +251,8 @@ public class ScenarioCreator {
 
 		printSummary(params.summaryPrefix, Status.SUCCESS, params.disturbanceProb, params.disturbanceQuantum, params.disturbanceSeed,
             avgBaseTime, avgTravelTime, avgProlong, varProlong, makespanAbs, makespanProlong);
+
+        System.exit(0);
     }
     
     private static boolean allDone(List<Agent> agents) {

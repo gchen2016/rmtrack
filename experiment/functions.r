@@ -1,35 +1,45 @@
 library(plyr)
 library(ggplot2)
 library(RColorBrewer)
+#install.packages('gridExtra')
 library(gridExtra)
 
-pd <- position_dodge(2)
+pd <- position_dodge(0)
 
 load.and.preprocess <- function(env) {
   dir <- paste("instances/",env, sep="")
   runs <- read.csv(file=paste(dir, "/data.out.head", sep=""), head=TRUE, sep=";")
   runs <- runs[order(runs$instance, runs$alg),]
-  
-  runs$avgProlongR[runs$alg=="ORCA"] <- runs$avgProlongT[runs$alg=="ORCA"]
-  runs$varProlongR[runs$alg=="ORCA"] <- runs$varProlongT[runs$alg=="ORCA"]
-  
-  runs$avgBase[runs$status=="TIMEOUT"] <- NA
-  runs$varBase[runs$status=="TIMEOUT"] <- NA
-  runs$avgWait[runs$status=="TIMEOUT"] <- NA
-  runs$varWait[runs$status=="TIMEOUT"] <- NA
-  runs$avgPlan[runs$status=="TIMEOUT"] <- NA
-  runs$varPlan[runs$status=="TIMEOUT"] <- NA
-  runs$avgPWindow[runs$status=="TIMEOUT"] <- NA
-  runs$varPWindow[runs$status=="TIMEOUT"] <- NA
-  runs$avgProlongT[runs$status=="TIMEOUT"] <- NA
-  runs$varProlongT[runs$status=="TIMEOUT"] <- NA
-  runs$avgProlongR[runs$status=="TIMEOUT"] <- NA
-  runs$varProlongR[runs$status=="TIMEOUT"] <- NA
-  
+
   maxagents <<- max(runs$nagents) + 3
 
   return(runs) 
 }
+
+avgtravel.vs.disturbance <- function(runs) {
+  nrobots <- max(runs$nagents)
+  avgbase <- mean(runs$avgBase, na.rm=TRUE)
+  travel <- ddply(runs, .(dprob, alg), summarise,  
+                  N = sum(!is.na(avgTravel)),
+                  mean = mean(avgTravel, na.rm=TRUE),
+                  sd = mean(varProlong, na.rm=TRUE),
+                  se = sd / sqrt(N*max(nagents)*4))
+  
+  plot <- ggplot(travel, aes(x=dprob*100, y=mean/1000, color=alg, linetype=alg, shape=alg)) +
+    geom_errorbar(aes(ymin=(mean-sd)/1000, ymax=(mean+sd)/1000), width=4, position=pd, size=0.5, alpha=0.5) +
+    geom_line(size=1, position=pd)+ 
+    geom_point(size=3, position=pd, fill="white")+   
+    scale_y_continuous(limits=c(0,200),name="avg. travel time [s]") +
+    scale_x_continuous(limits=c(0,50), name="disturbance [%]") +  
+    scale_linetype_discrete(name="Method: ") +
+    scale_color_discrete(name="Method: ") +
+    scale_shape(name="Method: ") +
+    geom_hline(yintercept=avgbase/1000, linetype='dotted', show_guide = TRUE, name='Move duration') +
+    theme_bw() +
+    ggtitle(paste("Avg. travel time to reach destination."))
+}
+
+##################### OLD CODE ########################
 
 common.runs <- function(runs, algs) {
   solved.by.all <- unique(runs$instance)
