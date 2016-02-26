@@ -1,4 +1,5 @@
 package cz.agents.rmtrack;
+import cz.agents.alite.simulation.vis.SimulationControlLayer;
 import cz.agents.alite.vis.VisManager;
 import cz.agents.alite.vis.layer.toggle.KeyToggleLayer;
 import cz.agents.rmtrack.agent.Agent;
@@ -25,7 +26,6 @@ import java.io.FileNotFoundException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
 
 
 public class ScenarioCreator {
@@ -76,7 +76,12 @@ public class ScenarioCreator {
         params.simSpeed = Double.parseDouble(simSpeedStr);
 
         String disturbanceProbStr = Args.getArgumentValue(args, "-dprob", false, "10");
-        params.disturbanceProb = Double.parseDouble(disturbanceProbStr) / 100;
+
+        String[] parts = disturbanceProbStr.split(" ", -1);
+        params.disturbanceProbs = new double[parts.length];
+        for (int i = 0; i < parts.length; i++) {
+            params.disturbanceProbs[i] = Integer.parseInt(parts[i]) / 100.0;
+        }
 
         String disturbanceSeedStr = Args.getArgumentValue(args, "-dseed", false, "1");
         params.disturbanceSeed = Integer.parseInt(disturbanceSeedStr);
@@ -109,8 +114,26 @@ public class ScenarioCreator {
 	    	params.runtimeDeadlineMs = timeout;
 	    	killAt(System.currentTimeMillis() + timeout, params.summaryPrefix, params.noOfClusters);
 	    }
-	    
-    	create(problem, method, params);
+
+        switch (method) {
+            case ALLSTOP:
+                solveTracking(problem, TrackingAgent.TrackingMethod.ALLSTOP, params);
+                break;
+
+            case RMTRACK:
+                solveTracking(problem, TrackingAgent.TrackingMethod.RMTRACK, params);
+                break;
+
+            case ORCA:
+                solveORCA(problem, params);
+                break;
+
+            default:
+                throw new RuntimeException("Unknown method");
+
+        }
+
+
     }
 
     private static void killAt(final long killAtMs, final String summaryPrefix, final int clusters) {
@@ -122,66 +145,53 @@ public class ScenarioCreator {
 						Thread.sleep(50);
 					} catch (InterruptedException e) {}
 				}
-				printSummary(summaryPrefix, Status.TIMEOUT, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+				printSummary(summaryPrefix, Status.TIMEOUT, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
 				System.exit(0);
 			}
     	};
     	t.start();
 	}
 
-
-	public static void create(EarliestArrivalProblem problem, Method method, final Parameters params) {
-		
-        if (params.showVis) {
-            VisUtil.initVisualization(problem, "Trajectory Tools ("+method.toString()+")", params.bgImageFile, params.timeStep/2);
-            VisUtil.visualizeEarliestArrivalProblem(problem);
-        }
-
-        Disturbance disturbance = new Disturbance((float) params.disturbanceProb, params.disturbanceQuantum, params.disturbanceSeed, problem.nAgents());
-        
-        switch (method) {
-            case ALLSTOP:
-                solveTracking(problem, disturbance, TrackingAgent.TrackingMethod.ALLSTOP, params);
-                break;
-        
-			case RMTRACK:
-	            solveTracking(problem, disturbance, TrackingAgent.TrackingMethod.RMTRACK, params);
-	            break;
-
-	        case ORCA:
-                solveORCA(problem, params);
-                break;
-
-            default:
-                throw new RuntimeException("Unknown method");
-
-        }
-    }
-
-	private static void solveTracking(final EarliestArrivalProblem problem, Disturbance disturbance,
+	private static void solveTracking(final EarliestArrivalProblem problem,
                                       TrackingAgent.TrackingMethod trackingMethod, final Parameters params) {
 
-        // find minimum lengths
-        double[] baseTaskDurations = RPP.findBaseTaskDurations(problem);
-        // find trajectories
-        final EvaluatedTrajectory[] trajs = RPP.findCollisionFreeTrajs(problem, params.timeStep, params.maxTime);
 
-        List<Agent> agents = new LinkedList<>();
-        for (int i=0; i < problem.nAgents(); i++) {
-            agents.add(i,
-                    new TrackingAgent(i,
-                        problem.getStart(i).toPoint2d(),
-                        problem.getTarget(i).toPoint2d(),
-                        problem.getBodyRadius(i),
-                        problem.getMaxSpeed(i),
-                        trajs[i],
-                        disturbance,
-                        trackingMethod,
-                        (int) baseTaskDurations[i]));
+        // find minimum lengths
+        int[] durationsOverShortestPath = Util.computeDurationOverShortestPath(problem);
+
+        // find trajectories
+        final EvaluatedTrajectory[] trajs = Util.findCollisionFreeTrajs(problem, params.timeStep, params.maxTime);
+
+        for (double disturbanceProb : params.disturbanceProbs) {
+
+            if (params.showVis) {
+                VisUtil.initVisualization(problem.getEnvironment(), "RMTRACK", params.bgImageFile, params.timeStep/2);
+                VisUtil.visualizeEarliestArrivalProblem(problem);
+            }
+
+            Disturbance disturbance = new Disturbance((float) disturbanceProb, params.disturbanceQuantum, params.disturbanceSeed, problem.nAgents());
+            final int[] lowerBoundDurations = Util.findLowerBoundDuration(problem, trajs, disturbance);
+
+            List<Agent> agents = new LinkedList<>();
+            for (int i=0; i < problem.nAgents(); i++) {
+                agents.add(i,
+                        new TrackingAgent(i,
+                                problem.getStart(i).toPoint2d(),
+                                problem.getTarget(i).toPoint2d(),
+                                problem.getBodyRadius(i),
+                                problem.getMaxSpeed(i),
+                                trajs[i],
+                                disturbance,
+                                trackingMethod));
+            }
+
+            // simulate execution
+            simulate(problem, agents, params);
+            printStatistics(agents, disturbanceProb, durationsOverShortestPath, lowerBoundDurations, params);
+            VisManager.unregisterLayers();
         }
 
-		// simulate execution
-		simulate(problem, agents, params);
+        System.exit(0);
     } 
 	
 	private static void solveORCA(final EarliestArrivalProblem problem, final Parameters params) {
@@ -203,56 +213,92 @@ public class ScenarioCreator {
 
         int SIMULATION_STEP_MS = 100;
         int SIMULATE_UNTIL = 600000;
-        int simulatedTimeMs = 0;
-        while (!allDone(agents) && simulatedTimeMs < SIMULATE_UNTIL){
-            simulatedTimeMs += SIMULATION_STEP_MS;
 
-            for (Agent agent: agents){
-                agent.update(simulatedTimeMs, simulatedTimeMs+SIMULATION_STEP_MS, agents);
-            }
-
-            if (params.showVis) {
-                try {
-                    Thread.sleep(SIMULATION_STEP_MS);
-                } catch (InterruptedException e) {
-                }
-            }
+        class SimulationControl {
+            public int simulatedTimeMs = 0;
+            public float simSpeed = 1;
+            public boolean running = true;
         }
 
+        final SimulationControl simControl = new SimulationControl();
+
+        // Simulation Control Layer
+        VisManager.registerLayer(SimulationControlLayer.create(new SimulationControlLayer.SimulationControlProvider() {
+
+            @Override
+            public void setSpeed(float f) {simControl.simSpeed = f;}
+
+            @Override
+            public void setRunning(boolean running) {simControl.running = running;}
+
+            @Override
+            public boolean isRunning() { return simControl.running; }
+
+            @Override
+            public double getTime() { return (simControl.simulatedTimeMs / 1000.0); }
+
+            @Override
+            public float getSpeed() { return simControl.simSpeed; }
+        }));
+
+        while (!allDone(agents) && simControl.simulatedTimeMs < SIMULATE_UNTIL){
+            if (simControl.running == true) {
+
+                for (Agent agent : agents) {
+                    agent.update(simControl.simulatedTimeMs, simControl.simulatedTimeMs + SIMULATION_STEP_MS, agents);
+                }
+
+                if (params.showVis) {
+                    try {
+                        Thread.sleep((int) ((double) SIMULATION_STEP_MS * (double) simControl.simSpeed));
+                    } catch (InterruptedException e) {
+                    }
+                }
+
+                simControl.simulatedTimeMs += SIMULATION_STEP_MS;
+            } else {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) { }
+            }
+        }
+    }
+
+    private static void printStatistics(List<Agent> agents, double disturbance,  int[] shortestPathDurations, int[] lbDurations, Parameters params) {
         long baseTimeSum = 0;
-    	long travelTimeSum = 0;
+        long lbTimeSum = 0;
+        long travelTimeSum = 0;
         long prolongSum = 0;
-    	long prolongSumSq = 0;
+        long prolongSumSq = 0;
         long makespanAbs = 0;
         long makespanProlong = 0;
 
-        for (Agent agent : agents) {
-            baseTimeSum += agent.baseTaskDuration;
+        for (int i=0; i<agents.size(); i++) {
+            Agent agent = agents.get(i);
+            baseTimeSum += shortestPathDurations[i];
+            lbTimeSum += lbDurations[i];
             travelTimeSum += agent.travelTime;
-            long prolongation = agent.travelTime - agent.baseTaskDuration;
+            long prolongation = agent.travelTime - lbDurations[i];
             prolongSum += prolongation;
             prolongSumSq += prolongation * prolongation;
 
             if (agent.travelTime > makespanAbs)
                 makespanAbs = agent.travelTime;
 
-            if ((agent.travelTime - agent.baseTaskDuration) > makespanProlong)
-                makespanProlong = (agent.travelTime - agent.baseTaskDuration);
-		}
-        
+            if ((agent.travelTime - lbDurations[i]) > makespanProlong)
+                makespanProlong = (agent.travelTime - lbDurations[i]);
+        }
+
         long n = agents.size();
-        
+
         long avgBaseTime = avg(baseTimeSum, n);
+        long avgLbTime = avg(lbTimeSum, n);
         long avgTravelTime = avg(travelTimeSum, n);
-        long avgProlong = avg(prolongSum, n);
-        long varProlong = sd(prolongSumSq, avgProlong, n);
 
-        // status;dprob;dquant;dseed;avgBase;avgTravel;avgProlong;varProlong;makespanAbs;makespanRel
+        // status;dprob;dquant;dseed;avgBase;avgLb;avgTravel;prolongSum;prolongSumSq;makespanAbs;makespanRel
 
-		printSummary(params.summaryPrefix, Status.SUCCESS, params.disturbanceProb, params.disturbanceQuantum, params.disturbanceSeed,
-            avgBaseTime, avgTravelTime, avgProlong, varProlong, makespanAbs, makespanProlong);
-
-        System.exit(0);
+        printSummary(params.summaryPrefix, Status.SUCCESS, disturbance, params.disturbanceQuantum, params.disturbanceSeed,
+                     avgBaseTime, avgLbTime, avgTravelTime, prolongSum, prolongSumSq, makespanAbs, makespanProlong);
     }
     
     private static boolean allDone(List<Agent> agents) {
@@ -335,9 +381,11 @@ public class ScenarioCreator {
 	static long avg(long sum, long n) {
 		return sum / n;
 	}
-    /* status;dprob;dquant;dseed;avgBase;avgTravel;avgProlong;varProlong;makespanAbs;makespanRel */
+
+    /* status;dprob;dquant;dseed;avgBase;avgLb;avgTravel;prolongSum;prolongSumSq;makespanAbs;makespanRel */
     private static void printSummary(String prefix, Status status, double dprob, int dquant, int dseed,
-                                     long avgBase, long avgTravel, long avgProlong, long varProlong, long makespanAbs,
+                                     long avgBase, long avgLb, long avgTravel, long prolongSum, long prolongSumSq,
+                                     long makespanAbs,
                                      long makespanRel) {
         System.out.println(prefix +
                 status.toString() + ";" +
@@ -345,9 +393,10 @@ public class ScenarioCreator {
                 dquant + ";" +
                 dseed + ";" +
                 avgBase + ";" +
+                avgLb + ";" +
                 avgTravel + ";" +
-                avgProlong + ";" +
-                varProlong + ";" +
+                prolongSum + ";" +
+                prolongSumSq + ";" +
                 makespanAbs + ";" +
                 makespanRel + ";");
     }

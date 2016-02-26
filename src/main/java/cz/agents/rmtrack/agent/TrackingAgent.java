@@ -17,8 +17,8 @@ public class TrackingAgent extends Agent {
     private boolean currentlyWaiting = false;
 
     public TrackingAgent(int id, tt.euclid2d.Point start, tt.euclid2d.Point goal, float radius, float maxSpeed,
-                         Trajectory traj, Disturbance disturbance, TrackingMethod trackingMethod, int baseTaskDuration) {
-        super(id, start, goal, radius, maxSpeed, disturbance, baseTaskDuration);
+                         Trajectory traj, Disturbance disturbance, TrackingMethod trackingMethod) {
+        super(id, start, goal, radius, maxSpeed, disturbance);
         this.traj = traj;
         this.trackingMethod = trackingMethod;
     }

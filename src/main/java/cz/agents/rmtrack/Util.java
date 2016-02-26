@@ -1,11 +1,11 @@
 package cz.agents.rmtrack;
 
 import cz.agents.rmtrack.util.BestResponse;
+import cz.agents.rmtrack.util.Disturbance;
 import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.AStarShortestPathSimple;
-import org.jgrapht.util.HeuristicToGoal;
 import org.jgrapht.util.heuristics.ZeroHeuristic;
 import tt.euclid2i.EvaluatedTrajectory;
 import tt.euclid2i.Line;
@@ -15,13 +15,13 @@ import tt.euclid2i.region.Circle;
 import tt.euclidtime3i.region.MovingCircle;
 import tt.jointeuclid2ni.probleminstance.EarliestArrivalProblem;
 
-import java.io.IOException;
+import javax.measure.unit.SI;
 import java.util.Collection;
 import java.util.LinkedList;
 
-public class RPP {
+public class Util {
     public static int RADIUS_GRACE = 0;
-    static Logger LOGGER = Logger.getLogger(RPP.class);
+    static Logger LOGGER = Logger.getLogger(Util.class);
 
     public static EvaluatedTrajectory[] findCollisionFreeTrajs(EarliestArrivalProblem problem, int timeStep, int maxTime) {
         return solve(problem, timeStep, maxTime, false);
@@ -76,15 +76,34 @@ public class RPP {
     }
 
 
-    public static double[] findBaseTaskDurations(EarliestArrivalProblem problem) {
-        double[] duration = new double[problem.nAgents()];
+    public static int[] computeDurationOverShortestPath(EarliestArrivalProblem problem) {
+        int[] duration = new int[problem.nAgents()];
         for (int i=0; i<problem.nAgents(); i++) {
             DirectedGraph<Point, Line> graph = problem.getPlanningGraph();
             GraphPath<Point, Line> path = AStarShortestPathSimple.findPathBetween(graph, new ZeroHeuristic<Point>(), problem.getStart(i), problem.getTarget(i));
-            duration[i] = path.getWeight() / problem.getMaxSpeed(i);
+            duration[i] = (int) Math.round(path.getWeight() / problem.getMaxSpeed(i));
         }
 
         return duration;
     }
 
+    public static int[] findLowerBoundDuration(EarliestArrivalProblem problem, EvaluatedTrajectory[] trajectories, Disturbance disturbance) {
+        final int SIM_STEP = 100;
+        int[] duration = new int[problem.nAgents()];
+        for (int i=0; i<problem.nAgents(); i++) {
+            EvaluatedTrajectory traj = trajectories[i];
+            int planState = 0;
+
+            for (int t = 0; planState < (traj.getMaxTime() - SIM_STEP); t += SIM_STEP) {
+                if (!traj.get(planState).equals(problem.getTarget(i))) {
+                    duration[i] = t;
+                }
+
+                if (!disturbance.isDisturbed(i, t)) {
+                    planState += SIM_STEP;
+                }
+            }
+        }
+        return duration;
+    }
 }

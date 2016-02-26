@@ -36,4 +36,8 @@ public class Disturbance {
         int tq = (time + offsets[i])/ timeQuantum;
         return disturbances[i][tq];
     }
+
+    public float getProbability() {
+        return probability;
+    }
 }

@@ -17,19 +17,17 @@ public abstract class Agent {
     float radius;
     final float maxSpeed;
     final Disturbance disturbance;
-    public final int baseTaskDuration;
 
     // Logging
     public int travelTime;
 
-    public Agent(int id, Point start, Point goal, float radius, float maxSpeed, Disturbance disturbance, int baseTaskDuration) {
+    public Agent(int id, Point start, Point goal, float radius, float maxSpeed, Disturbance disturbance) {
         this.id = id;
         this.start = start;
         this.goal = goal;
         this.radius = radius;
         this.maxSpeed = maxSpeed;
         this.disturbance = disturbance;
-        this.baseTaskDuration = baseTaskDuration;
         this.travelTime = 0;
     }
 
