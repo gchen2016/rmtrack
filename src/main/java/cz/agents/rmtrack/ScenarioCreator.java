@@ -3,6 +3,7 @@ import cz.agents.alite.simulation.vis.SimulationControlLayer;
 import cz.agents.alite.vis.VisManager;
 import cz.agents.alite.vis.layer.toggle.KeyToggleLayer;
 import cz.agents.rmtrack.agent.Agent;
+import cz.agents.rmtrack.agent.ORCAAgent;
 import cz.agents.rmtrack.agent.TrackingAgent;
 import cz.agents.rmtrack.util.Disturbance;
 import org.apache.log4j.Logger;
@@ -195,6 +196,41 @@ public class ScenarioCreator {
     } 
 	
 	private static void solveORCA(final EarliestArrivalProblem problem, final Parameters params) {
+        for (double disturbanceProb : params.disturbanceProbs) {
+
+            if (params.showVis) {
+                VisUtil.initVisualization(problem.getEnvironment(), "RMTRACK", params.bgImageFile, params.timeStep/2);
+                VisUtil.visualizeEarliestArrivalProblem(problem);
+            }
+
+            Disturbance disturbance = new Disturbance((float) disturbanceProb, params.disturbanceQuantum, params.disturbanceSeed, problem.nAgents());
+
+            List<Agent> agents = new LinkedList<>();
+            for (int i=0; i < problem.nAgents(); i++) {
+                agents.add(i,
+                        new ORCAAgent(i,
+                                problem.getStart(i).toPoint2d(),
+                                problem.getTarget(i).toPoint2d(),
+                                problem.getEnvironment(),
+                                problem.getPlanningGraph(),
+                                problem.getBodyRadius(i),
+                                problem.getMaxSpeed(i),
+                                disturbance,
+                                true ));
+            }
+
+            // simulate execution
+            simulate(problem, agents, params);
+
+            int[] zeros = new int[problem.nAgents()];
+
+            printStatistics(agents, disturbanceProb, zeros, zeros, params);
+            VisManager.unregisterLayers();
+        }
+
+        System.exit(0);
+
+
 //        simulate(problem, new AgentFactory() {
 //            @Override
 //            public Agent createAgent(String name, int i, Point start, int nTasks,
