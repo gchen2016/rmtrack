@@ -19,24 +19,37 @@ load.and.preprocess <- function(env) {
 avgtravel.vs.disturbance <- function(runs) {
   nrobots <- max(runs$nagents)
   avgbase <- mean(runs$avgBase, na.rm=TRUE)
+  avgbase2 <- mean(runs$avgTravel[runs$dprob == 0], na.rm=TRUE)
+  
   travel <- ddply(runs, .(dprob, alg), summarise,  
                   N = sum(!is.na(avgTravel)),
                   mean = mean(avgTravel, na.rm=TRUE),
                   sd = mean(varProlong, na.rm=TRUE),
                   se = sd / sqrt(N*max(nagents)*4))
   
-  plot <- ggplot(travel, aes(x=dprob*100, y=mean/1000, color=alg, linetype=alg, shape=alg)) +
+  dprob <- unique(travel$dprob)
+  lowbound <- avgbase2 / (1-unique(travel$dprob))
+  aallstop <- avgbase2 / (1-unique(travel$dprob))^nrobots
+  
+  additional_lb <- data.frame(dprob, N=0, alg="LOWBOUND", mean=lowbound, sd=0, se=0)
+  additional_aal <- data.frame(dprob, N=0, alg="ALLSTOP_A", mean=aallstop, sd=0, se=0)
+  merged <- rbind(travel, additional_lb, additional_aal)
+  
+  plot <- ggplot(merged, aes(x=dprob*100, y=mean/1000, color=alg, shape=alg)) +
     geom_errorbar(aes(ymin=(mean-sd)/1000, ymax=(mean+sd)/1000), width=4, position=pd, size=0.5, alpha=0.5) +
     geom_line(size=1, position=pd)+ 
     geom_point(size=3, position=pd, fill="white")+   
-    scale_y_continuous(limits=c(0,200),name="avg. travel time [s]") +
+    scale_y_continuous(name="avg. travel time [s]") +
     scale_x_continuous(limits=c(0,50), name="disturbance [%]") +  
-    scale_linetype_discrete(name="Method: ") +
     scale_color_discrete(name="Method: ") +
     scale_shape(name="Method: ") +
-    geom_hline(yintercept=avgbase/1000, linetype='dotted', show_guide = TRUE, name='Move duration') +
+    geom_hline(yintercept=avgbase2/1000, linetype='dashed', show_guide = TRUE, name='Move duration') +
+    #geom_hline(yintercept=avgbase/1000, linetype='dotted', show_guide = TRUE, name='Move duration') +
     theme_bw() +
-    ggtitle(paste("Avg. travel time to reach destination."))
+    coord_cartesian(ylim = c(0, 200)) +
+    ggtitle(paste("Avg. travel time (", nrobots, " robots)", sep=""))
+    
+    return(plot)
 }
 
 ##################### OLD CODE ########################

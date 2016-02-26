@@ -33,7 +33,7 @@ function generate_instance_set {
 
             for alg in $algs
             do
-                for dprob in 0 2 6 8 10 15 30
+                for dprob in 0 2 6 8 10 15 30 40 50
                 do
                     summaryprefix="$instance;$nagents;$radius;$seed;$timestep;$maxtime;$alg;"
                     echo -method $alg -problemfile $instancefile -timestep $timestep -maxtime $maxtime -timeout $maxtime -dseed 1 -dprob $dprob -dquant 1000 -summaryprefix "$summaryprefix" >> $instancefolder/data.in
@@ -48,10 +48,10 @@ function generate_instance_set {
 }
 
 # ubremen
-generate_instance_set d-envs/ubremen-r27-docks.xml instances/ubremen-r27 27 65 600000 "10" # up to 35
+generate_instance_set d-envs/ubremen-r27-docks.xml instances/ubremen-r27 27 65 600000 "10 20 35" # up to 35
 
 # warehouse
-#generate_instance_set d-envs/warehouse-r25-docks.xml instances/warehouse-r25 25 54 600000 "1 10 50"
+generate_instance_set d-envs/warehouse-r25-docks.xml instances/warehouse-r25 25 54 600000 "10 25 50"
 
 # emptyhall
-#generate_instance_set d-envs/empty-hall-r25-docks.xml instances/empty-hall-r25 20 54 600000 "1 10 50"
+generate_instance_set d-envs/empty-hall-r25-docks.xml instances/empty-hall-r25 20 54 600000 "10 25 50"

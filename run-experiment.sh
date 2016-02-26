@@ -4,9 +4,9 @@
 echo -e "\n >>>> Cleaning\n"
 mvn clean -q
 #rm -f experiment/instances/empty-hall-r25/*.out.*
-rm -f experiment/instances/ubremen-r27/*.out.*
+#rm -f experiment/instances/ubremen-r27/*.out.*
 #rm -f experiment/instances/warehouse-r25/*.out.*
-rm -rf experiment/plots
+#rm -rf experiment/plots
 rm -f expermient/solver.jar
 
 # compile the experimental framework
@@ -29,14 +29,14 @@ MEM=2  # maximum memory used by one simulation run in GBs
 
 
 # run the experiment in ubremen environment
-echo -e "\n >>>> Running the experiment in ubremen...\n"
-./run.sh ubremen-r27 $CPUS data.in data.out $MEM
-./addhead.sh ubremen-r27
+#echo -e "\n >>>> Running the experiment in ubremen...\n"
+#./run.sh ubremen-r27 $CPUS data.in data.out $MEM
+#./addhead.sh ubremen-r27
 
 # run the experiment in warehouse environment
-#echo -e "\n >>>> Running the experiment in warehouse...\n"  
-#./run.sh warehouse-r25 $CPUS data.in data.out $MEM
-#./addhead.sh warehouse-r25
+echo -e "\n >>>> Running the experiment in warehouse...\n"  
+./run.sh warehouse-r25 $CPUS data.in data.out $MEM
+./addhead.sh warehouse-r25
 
 
 # make plots from the data
