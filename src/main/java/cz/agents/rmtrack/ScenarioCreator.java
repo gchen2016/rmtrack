@@ -77,7 +77,7 @@ public class ScenarioCreator {
 
         String disturbanceProbStr = Args.getArgumentValue(args, "-dprob", false, "10");
 
-        String[] parts = disturbanceProbStr.split(" ", -1);
+        String[] parts = disturbanceProbStr.split("s", -1);
         params.disturbanceProbs = new double[parts.length];
         for (int i = 0; i < parts.length; i++) {
             params.disturbanceProbs[i] = Integer.parseInt(parts[i]) / 100.0;

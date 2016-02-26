@@ -19,8 +19,8 @@ cp target/robust-tracking-1.0-SNAPSHOT-jar-with-dependencies.jar experiment/solv
 cd experiment
 
 # generate instances
-#echo -e "\n >>>> Generating the instances...\n"
-#./prepare.sh
+echo -e "\n >>>> Generating the instances...\n"
+./prepare.sh
 
 
 CPUS=2 # no of CPU to be used for the experiment (how many simulations to run in parallel)

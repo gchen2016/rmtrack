@@ -10,7 +10,7 @@ function generate_instance_set {
     maxspeed="0.05"
     timestep=`echo "import math;print(int(math.ceil($gridedgelen/(2*$maxspeed))))" | python`
 
-    echo "Preparing instanceset $instancesetname. Will use timestep $timestep."
+    echo "Preparing instanceset $instancefolder. Will use timestep $timestep."
 
     mkdir -p $instancefolder
     rm $instancefolder/*
@@ -33,18 +33,17 @@ function generate_instance_set {
 
             for alg in $algs
             do
-                for dprob in 0 2 6 8 10 15 30 40 50
-                do
-                    summaryprefix="$instance;$nagents;$radius;$seed;$timestep;$maxtime;$alg;"
-                    echo -method $alg -problemfile $instancefile -timestep $timestep -maxtime $maxtime -timeout $maxtime -dseed 1 -dprob $dprob -dquant 1000 -summaryprefix "$summaryprefix" >> $instancefolder/data.in
-                done
+                dprob="0s2s6s8s10s15s30s40s50"
+
+                summaryprefix="$instance;$nagents;$radius;$seed;$timestep;$maxtime;$alg;"
+                echo -method $alg -problemfile $instancefile -timestep $timestep -maxtime $maxtime -timeout $maxtime -dseed 1 -dprob $dprob -dquant 1000 -summaryprefix "$summaryprefix" >> $instancefolder/data.in
             done
 
             echo Finished instance no $instance. Agents: $nagents. Seed: $seed.
         done
     done
-    echo "instance;nagents;radius;seed;timestep;maxtime;alg;status;dprob;dquant;dseed;avgBase;avgTravel;avgProlong;varProlong;makespanAbs;makespanRel;" > $instancefolder/head
-    echo Done. Created $instance instances at $envname environment. Instances stored in $instancefolder.
+    echo "instance;nagents;radius;seed;timestep;maxtime;alg;status;dprob;dquant;dseed;avgBase;avgLb;avgTravel;prolongSum;prolongSumSq;makespanAbs;makespanRel;" > $instancefolder/head
+    echo Done. Created $instance instances at $denvxml environment. Instances stored in $instancefolder.
 }
 
 # ubremen
