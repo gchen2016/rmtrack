@@ -26,25 +26,30 @@ avgtravel.vs.disturbance <- function(runs) {
                   mean = mean(avgTravel, na.rm=TRUE),
                   sd = mean(varProlong, na.rm=TRUE),
                   se = sd / sqrt(N*max(nagents)*4))
+  travel$type='data'
   
   dprob <- unique(travel$dprob)
   lowbound <- avgbase2 / (1-unique(travel$dprob))
   aallstop <- avgbase2 / (1-unique(travel$dprob))^nrobots
   
-  additional_lb <- data.frame(dprob, N=0, alg="LOWBOUND", mean=lowbound, sd=0, se=0)
-  additional_aal <- data.frame(dprob, N=0, alg="ALLSTOP_A", mean=aallstop, sd=0, se=0)
-  merged <- rbind(travel, additional_lb, additional_aal)
+  additional_lb <- data.frame(dprob, N=0, alg="LOW BOUND", mean=lowbound, sd=0, se=0, type='bound')
+  #additional_aal <- data.frame(dprob, N=0, alg="UP BOUND", mean=aallstop, sd=0, se=0, type='bound')
+  merged <- rbind(travel, additional_lb)
   
-  plot <- ggplot(merged, aes(x=dprob*100, y=mean/1000, color=alg, shape=alg)) +
+  plot <- ggplot(travel, aes(x=dprob*100, y=mean/1000, color=alg, shape=alg)) +
+    geom_line(data=additional_lb, mapping=aes(x=dprob*100, y=mean/1000), size=0.7, color="#555555", linetype="dashed") +
     geom_errorbar(aes(ymin=(mean-sd)/1000, ymax=(mean+sd)/1000), width=4, position=pd, size=0.5, alpha=0.5) +
-    geom_line(size=1, position=pd)+ 
-    geom_point(size=3, position=pd, fill="white")+   
+    geom_line(size=1, position=pd) + 
+    geom_point(size=3, position=pd, fill="white") +   
     scale_y_continuous(name="avg. travel time [s]") +
-    scale_x_continuous(limits=c(0,50), name="disturbance [%]") +  
+    scale_x_continuous(name="disturbance intensity [%]") +  
     scale_color_discrete(name="Method: ") +
     scale_shape(name="Method: ") +
-    geom_hline(yintercept=avgbase2/1000, linetype='dashed', show_guide = TRUE, name='Move duration') +
+    #geom_hline(yintercept=avgbase2/1000, linetype='dashed', show_guide = TRUE, name='Move duration') +
     #geom_hline(yintercept=avgbase/1000, linetype='dotted', show_guide = TRUE, name='Move duration') +
+    #scale_linetype_manual(values = c("data"="solid","bound"="dotted")) +
+    #scale_color_manual(values = c("ALLSTOP"="#CC6666","RMTRACK"="#9999CC", "LOW BOUND"="#888888", "UP BOUND"="gray"), name="Method: ") +
+    #scale_shape_manual(values = c("ALLSTOP"=0,"RMTRACK"=1), name="Method: ") +
     theme_bw() +
     coord_cartesian(ylim = c(0, 200)) +
     ggtitle(paste("Avg. travel time (", nrobots, " robots)", sep=""))
