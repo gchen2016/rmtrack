@@ -23,10 +23,12 @@ avgtravel.vs.disturbance <- function(runs) {
   
   travel <- ddply(runs, .(dprob, alg), summarise,  
                   N = sum(!is.na(avgTravel)),
-                  mean = mean(avgTravel, na.rm=TRUE),
-                  sd = mean(varProlong, na.rm=TRUE),
-                  se = sd / sqrt(N*max(nagents)*4))
-  travel$type='data'
+                  mean = mean(avgTravel),
+                  meanLb = mean(avgLb),
+                  prolongSum = sum(prolongSum, na.rm=TRUE),
+                  prolongSumSq = sum(prolongSumSq, na.rm=TRUE))
+  
+  travel$sd = sqrt(travel$prolongSumSq/(travel$N*nrobots) - (travel$prolongSum/(travel$N*nrobots))^2)
   
   dprob <- unique(travel$dprob)
   lowbound <- avgbase2 / (1-unique(travel$dprob))
@@ -39,7 +41,8 @@ avgtravel.vs.disturbance <- function(runs) {
   plot <- ggplot(travel, aes(x=dprob*100, y=mean/1000, color=alg, shape=alg)) +
     geom_line(data=additional_lb, mapping=aes(x=dprob*100, y=mean/1000), size=0.7, color="#555555", linetype="dashed") +
     geom_errorbar(aes(ymin=(mean-sd)/1000, ymax=(mean+sd)/1000), width=4, position=pd, size=0.5, alpha=0.5) +
-    geom_line(size=1, position=pd) + 
+    geom_line(size=1, position=pd) +
+    #geom_line(size=0.5, mapping=aes(y=meanLb/1000), color="red") + 
     geom_point(size=3, position=pd, fill="white") +   
     scale_y_continuous(name="avg. travel time [s]") +
     scale_x_continuous(name="disturbance intensity [%]") +  
