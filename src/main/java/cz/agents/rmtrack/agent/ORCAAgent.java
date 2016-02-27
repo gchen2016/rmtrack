@@ -147,6 +147,8 @@ public class ORCAAgent extends Agent {
         rvoAgent.computeNeighbors(kdTree);
 
         Vector2 newVelocity = rvoAgent.computeNewVelocity(timeStep);
+
+        // Add small random disturbance
         final float RANDOM_DISTURBANCE = 0.001f;
         newVelocity = new Vector2(
                 newVelocity.x() - RANDOM_DISTURBANCE/2 + RANDOM_DISTURBANCE*random.nextFloat(),
@@ -158,10 +160,6 @@ public class ORCAAgent extends Agent {
         } else {
             wasDisturbed = false;
         }
-
-        // add some randomness
-
-
 
         rvoAgent.update(timeStep, newVelocity);
 
