@@ -216,7 +216,7 @@ public class ScenarioCreator {
                                 problem.getBodyRadius(i),
                                 problem.getMaxSpeed(i),
                                 disturbance,
-                                true ));
+                                params.showVis ));
             }
 
             // simulate execution
@@ -229,18 +229,7 @@ public class ScenarioCreator {
         }
 
         System.exit(0);
-
-
-//        simulate(problem, new AgentFactory() {
-//            @Override
-//            public Agent createAgent(String name, int i, Point start, int nTasks,
-//                    Environment env, DirectedGraph<Point, Line> planningGraph, int agentBodyRadius, float speed) {
-//
-//				Agent agent = new ORCAAgent(name, start, nTasks, env, planningGraph, agentBodyRadius, speed, params.maxTime, params.timeStep, params.showVis, params.random);
-//				return agent;
-//            }
-//        }, params);
-    }    
+    }
 
     private static void simulate(final EarliestArrivalProblem problem, List<Agent> agents, final Parameters params) {
     	

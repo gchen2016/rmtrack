@@ -38,13 +38,11 @@ public class ORCAAgent extends Agent {
 
     private static final long UNKNOWN = -1;
 
-    private static final double GOAL_REACHED_TOLERANCE = 3;
-    private long lastTickTime = UNKNOWN;
-
     private boolean showVis;
 
     private Collection<Region> ttObstaclesLessInflated;
     private double DesiredControlNodeSearchRadius;
+    private boolean wasDisturbed = false;
 
     public ORCAAgent(int id, tt.euclid2d.Point start, tt.euclid2d.Point goal, Environment environment, DirectedGraph<Point, Line> planningGraph,
                      int agentBodyRadius, float maxSpeed, Disturbance disturbance, boolean showVis) {
@@ -148,6 +146,9 @@ public class ORCAAgent extends Agent {
         Vector2 newVelocity = rvoAgent.computeNewVelocity(timeStep);
         if (isDisturbed(currentTime)) {
             newVelocity = new Vector2(0,0);
+            wasDisturbed = true;
+        } else {
+            wasDisturbed = false;
         }
         rvoAgent.update(timeStep, newVelocity);
 
@@ -217,7 +218,7 @@ public class ORCAAgent extends Agent {
 
     @Override
     public boolean wasDisturbed() {
-        return false;
+        return wasDisturbed;
     }
 
     private String getName() {
