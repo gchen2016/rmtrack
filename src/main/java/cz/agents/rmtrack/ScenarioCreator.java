@@ -27,6 +27,7 @@ import java.io.FileNotFoundException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 
 
 public class ScenarioCreator {
@@ -216,6 +217,7 @@ public class ScenarioCreator {
                                 problem.getBodyRadius(i),
                                 problem.getMaxSpeed(i),
                                 disturbance,
+                                new Random(params.disturbanceSeed),
                                 params.showVis ));
             }
 

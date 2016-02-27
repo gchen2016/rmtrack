@@ -26,6 +26,7 @@ public class ORCAAgent extends Agent {
     private static final float TIME_HORIZON_OBSTACLE = 1000;
 
     private static final double NEAR_GOAL_EPS = 0.0f;
+    private final Random random;
 
     private RVOAgent rvoAgent;
     private HashMap<String, RVOAgent> neighbors;
@@ -45,11 +46,12 @@ public class ORCAAgent extends Agent {
     private boolean wasDisturbed = false;
 
     public ORCAAgent(int id, tt.euclid2d.Point start, tt.euclid2d.Point goal, Environment environment, DirectedGraph<Point, Line> planningGraph,
-                     int agentBodyRadius, float maxSpeed, Disturbance disturbance, boolean showVis) {
+                     int agentBodyRadius, float maxSpeed, Disturbance disturbance, Random random, boolean showVis) {
         super(id, start, goal, agentBodyRadius, maxSpeed, disturbance);
 
         this.showVis = showVis;
         this.maxSpeed = maxSpeed;
+        this.random = random;
 
         rvoAgent = new RVOAgent();
 
@@ -143,13 +145,24 @@ public class ORCAAgent extends Agent {
         kdTree.buildAgentTree(rvoAgents);
 
         rvoAgent.computeNeighbors(kdTree);
+
         Vector2 newVelocity = rvoAgent.computeNewVelocity(timeStep);
+        final float RANDOM_DISTURBANCE = 0.001f;
+        newVelocity = new Vector2(
+                newVelocity.x() - RANDOM_DISTURBANCE/2 + RANDOM_DISTURBANCE*random.nextFloat(),
+                newVelocity.y() - RANDOM_DISTURBANCE/2 + RANDOM_DISTURBANCE*random.nextFloat());
+
         if (isDisturbed(currentTime)) {
             newVelocity = new Vector2(0,0);
             wasDisturbed = true;
         } else {
             wasDisturbed = false;
         }
+
+        // add some randomness
+
+
+
         rvoAgent.update(timeStep, newVelocity);
 
         PositionBlackboard.recordNewPosition(getName(), rvoAgent.id_, rvoAgent.position_.toPoint2d(), rvoAgent.velocity_.toVector2d(), rvoAgent.radius_);
