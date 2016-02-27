@@ -19,7 +19,7 @@ function generate_instance_set {
     instance=0
     for nagents in $agents
     do
-        for seed in {1..5}
+        for seed in {1..10}
         do
             let instance=instance+1
             # create a problem instance file
@@ -29,7 +29,7 @@ function generate_instance_set {
             ## ConflictGenerator
             java -XX:+UseSerialGC -cp solver.jar -Dlog4j.configuration="file:$PWD/log4j.custom" tt.jointeuclid2ni.probleminstance.generator.GenerateEAInstance -env $denvxml -nagents $nagents -radius $radius -maxspeed $maxspeed -seed $seed -sgnooverlap -outfile $instancefile
 
-            algs="ALLSTOP RMTRACK"
+            algs="ALLSTOP RMTRACK ORCA"
 
             for alg in $algs
             do

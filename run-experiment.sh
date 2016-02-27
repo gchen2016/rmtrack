@@ -27,15 +27,15 @@ CPUS=2 # no of CPU to be used for the experiment (how many simulations to run in
 MEM=2  # maximum memory used by one simulation run in GBs
 
 # run the experiment in empty-hall environment
-#echo -e "\n >>>> Running the experiment in empty hall...\n"
-#./run.sh empty-hall-r25 $CPUS data.in data.out $MEM  
-#./addhead.sh empty-hall-r25
+echo -e "\n >>>> Running the experiment in empty hall...\n"
+./run.sh empty-hall-r25 $CPUS data.in data.out $MEM  
+./addhead.sh empty-hall-r25
 
 
 # run the experiment in ubremen environment
-#echo -e "\n >>>> Running the experiment in ubremen...\n"
-#./run.sh ubremen-r27 $CPUS data.in data.out $MEM
-#./addhead.sh ubremen-r27
+echo -e "\n >>>> Running the experiment in ubremen...\n"
+./run.sh ubremen-r27 $CPUS data.in data.out $MEM
+./addhead.sh ubremen-r27
 
 # run the experiment in warehouse environment
 echo -e "\n >>>> Running the experiment in warehouse...\n"  
