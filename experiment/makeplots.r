@@ -10,26 +10,19 @@ make.plots <- function(imgdir, env) {
   
   for (nagents in unique(runs$nagents)) {
     print(nagents)
-    traveltime.plot <- avgtravel.vs.disturbance (runs[runs$nagents==nagents,]) + theme(legend.position="none")
-    ggsave(filename=paste(imgdir, env, "/traveltime-", nagents,"-robots.pdf", sep=""), width=6, height=3.2)
+    
+    traveltime.plot <- avgtravel.vs.disturbance (runs[runs$nagents==nagents & (runs$alg=="ALLSTOP" | runs$alg=="RMTRACK"),]) + theme(legend.position="none")
+    ggsave(filename=paste(imgdir, env, "/traveltime-", nagents,"-robots.pdf", sep=""), width=3, height=3.2)
+    
     traveltime.plot.w.legend <- traveltime.plot + theme(legend.position="bottom", legend.direction="horizontal", legend.box = "horizontal")
-    ggsave(filename=paste(imgdir, env, "/traveltime-", nagents,"-robots-w-legend.pdf", sep=""), width=6, height=3.2)
+    ggsave(filename=paste(imgdir, env, "/traveltime-", nagents,"-robots-w-legend.pdf", sep=""), width=3, height=3.2)
+    
+    successrate.plot <- successrate.vs.disturbance(runs[runs$nagents==nagents & (runs$alg=="ORCA" | runs$alg=="RMTRACK"),]) + theme(legend.position="none")
+    ggsave(filename=paste(imgdir, env, "/success-rate-", nagents,"-robots.pdf", sep=""), width=3, height=3.2)
+    
+    traveltime.common.plot <- avgtravel.vs.disturbance.common.only(runs[runs$nagents==nagents & (runs$alg=="ORCA" | runs$alg=="RMTRACK"),]) + theme(legend.position="none")
+    ggsave(filename=paste(imgdir, env, "/traveltime-orca-", nagents,"-robots.pdf", sep=""), width=3, height=3.2)
   }
-  
-  # 
-  # task.plot <- avgtaskprolong.vs.nagents(runs) + theme(legend.position="none")
-  # ggsave(filename=paste(imgdir, env, "/prolongation.pdf", sep=""), width=6, height=3.2)
-  # 
-  
-  # travel.time.w.legend <- traveltime.plot + theme(legend.position="bottom", legend.direction="horizontal", legend.box = "horizontal")
-  # ggsave(filename=paste(imgdir, env, "/plot-with-legend.pdf", sep=""), width=10, height=6, plot=legend.grob)
-  # legend <- get.legend(traveltime.plot + theme(legend.position="bottom", legend.direction="horizontal", legend.box = "horizontal"))
-  # lheight <- sum(legend$heights)
-  
-  # 
-  # legend.grob <- arrangeGrob(arrangeGrob(traveltime.plot, legend, heights=c(unit(1, "npc") - lheight, lheight), ncol=1))
-  # ggsave(filename=paste(imgdir, env, "/prolong-with-legend.pdf", sep=""), width=10, height=6, plot=legend.grob)
-
 }
 
 imgdir <- "plots/"

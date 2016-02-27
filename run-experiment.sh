@@ -2,7 +2,7 @@
 
 # clean temporary files and previous results
 echo -e "\n >>>> Cleaning\n"
-mvn clean -q
+#mvn clean -q
 #rm -f experiment/instances/empty-hall-r25/*.out.*
 #rm -f experiment/instances/ubremen-r27/*.out.*
 #rm -f experiment/instances/warehouse-r25/*.out.*
@@ -19,7 +19,7 @@ cp target/robust-tracking-1.0-SNAPSHOT-jar-with-dependencies.jar experiment/solv
 cd experiment
 
 # generate instances
-echo -e "\n >>>> Generating the instances...\n"
+#echo -e "\n >>>> Generating the instances...\n"
 ./prepare.sh
 
 

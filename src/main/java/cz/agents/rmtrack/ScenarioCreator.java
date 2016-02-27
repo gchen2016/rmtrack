@@ -147,7 +147,7 @@ public class ScenarioCreator {
 						Thread.sleep(50);
 					} catch (InterruptedException e) {}
 				}
-				printSummary(summaryPrefix, Status.TIMEOUT, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+				printSummary(summaryPrefix, Status.TIMEOUT, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
 				System.exit(0);
 			}
     	};
@@ -156,7 +156,6 @@ public class ScenarioCreator {
 
 	private static void solveTracking(final EarliestArrivalProblem problem,
                                       TrackingAgent.TrackingMethod trackingMethod, final Parameters params) {
-
 
         // find minimum lengths
         int[] durationsOverShortestPath = Util.computeDurationOverShortestPath(problem);
@@ -173,6 +172,7 @@ public class ScenarioCreator {
 
             Disturbance disturbance = new Disturbance((float) disturbanceProb, params.disturbanceQuantum, params.disturbanceSeed, problem.nAgents());
             final int[] lowerBoundDurations = Util.findLowerBoundDuration(problem, trajs, disturbance);
+            final int[] d0Durations = Util.findLowerBoundDuration(problem, trajs, new Disturbance(0, 1000, 1, problem.nAgents()));
 
             List<Agent> agents = new LinkedList<>();
             for (int i=0; i < problem.nAgents(); i++) {
@@ -189,7 +189,7 @@ public class ScenarioCreator {
 
             // simulate execution
             simulate(problem, agents, params);
-            printStatistics(agents, disturbanceProb, durationsOverShortestPath, lowerBoundDurations, params);
+            printStatistics(agents, disturbanceProb,  durationsOverShortestPath, d0Durations, lowerBoundDurations, params);
             VisManager.unregisterLayers();
         }
 
@@ -198,6 +198,8 @@ public class ScenarioCreator {
 	
 	private static void solveORCA(final EarliestArrivalProblem problem, final Parameters params) {
         for (double disturbanceProb : params.disturbanceProbs) {
+
+            int[] durationsOverShortestPath = Util.computeDurationOverShortestPath(problem);
 
             if (params.showVis) {
                 VisUtil.initVisualization(problem.getEnvironment(), "RMTRACK", params.bgImageFile, params.timeStep/2);
@@ -226,7 +228,7 @@ public class ScenarioCreator {
 
             int[] zeros = new int[problem.nAgents()];
 
-            printStatistics(agents, disturbanceProb, zeros, zeros, params);
+            printStatistics(agents, disturbanceProb, durationsOverShortestPath, zeros, zeros, params);
             VisManager.unregisterLayers();
         }
 
@@ -291,36 +293,68 @@ public class ScenarioCreator {
         }
     }
 
-    private static void printStatistics(List<Agent> agents, double disturbance,  int[] shortestPathDurations, int[] lbDurations, Parameters params) {
-        long baseTimeSum = 0;
-        long lbTimeSum = 0;
+    private static void printStatistics(List<Agent> agents, double disturbance,  int[] shortestPathDurations, int[] d0Durations, int[] lbDurations, Parameters params) {
+        long spSum = 0;
+        long d0Sum = 0;
+        long lbSum = 0;
+
         long travelTimeSum = 0;
-        long prolongSum = 0;
-        long prolongSumSq = 0;
+        long travelTimeSumSq = 0;
+
+        long prolongSpSum = 0;
+        long prolongSpSumSq = 0;
+
+        long prolongD0Sum = 0;
+        long prolongD0SumSq = 0;
+
+        long prolongLBSum = 0;
+        long prolongLBSumSq = 0;
+
         long makespanAbs = 0;
-        long makespanProlong = 0;
+        long makespanSPProlong = 0;
+        long makespanD0Prolong = 0;
+        long makespanLBProlong = 0;
+
 
         for (int i=0; i<agents.size(); i++) {
             Agent agent = agents.get(i);
-            baseTimeSum += shortestPathDurations[i];
-            lbTimeSum += lbDurations[i];
+            spSum += shortestPathDurations[i];
+            d0Sum += d0Durations[i];
+            lbSum += lbDurations[i];
+
             travelTimeSum += agent.travelTime;
-            long prolongation = agent.travelTime - lbDurations[i];
-            prolongSum += prolongation;
-            prolongSumSq += prolongation * prolongation;
+            travelTimeSumSq += travelTimeSum * travelTimeSum;
+
+            long prolongSp = agent.travelTime - shortestPathDurations[i];
+            long prolongD0 = agent.travelTime - d0Durations[i];
+            long prolongLB = agent.travelTime - lbDurations[i];
+
+            prolongSpSum += prolongSp;
+            prolongD0Sum += prolongD0;
+            prolongLBSum += prolongLBSum;
+
+            prolongSpSumSq += prolongSp * prolongSp;
+            prolongD0SumSq += prolongD0 * prolongSp;
+            prolongLBSumSq += prolongLBSum * prolongSp;
 
             if (agent.travelTime > makespanAbs)
                 makespanAbs = agent.travelTime;
 
-            if ((agent.travelTime - lbDurations[i]) > makespanProlong)
-                makespanProlong = (agent.travelTime - lbDurations[i]);
+            if ((agent.travelTime - shortestPathDurations[i]) > makespanSPProlong)
+                makespanSPProlong = (agent.travelTime - shortestPathDurations[i]);
+
+            if ((agent.travelTime - d0Durations[i]) > makespanD0Prolong)
+                makespanD0Prolong = (agent.travelTime - d0Durations[i]);
+
+            if ((agent.travelTime - lbDurations[i]) > makespanLBProlong)
+                makespanLBProlong = (agent.travelTime - lbDurations[i]);
         }
 
         long n = agents.size();
 
-        long avgBaseTime = avg(baseTimeSum, n);
-        long avgLbTime = avg(lbTimeSum, n);
-        long avgTravelTime = avg(travelTimeSum, n);
+//        long avgBaseTime = avg(spSum, n);
+//        long avgLbTime = avg(lbSum, n);
+//        long avgTravelTime = avg(travelTimeSum, n);
 
         Status status;
         if (allDone(agents)) {
@@ -329,10 +363,12 @@ public class ScenarioCreator {
             status = Status.FAIL;
         }
 
-        // status;dprob;dquant;dseed;avgBase;avgLb;avgTravel;prolongSum;prolongSumSq;makespanAbs;makespanRel
+
+        // status;dprob;dquant;dseed;spSum;d0Sum;lbSum;travelTimeSum;travelTimeSumSq;prolongSpSum;prolongSpSumSq;prolongD0Sum;prolongD0SumSq;prolongLBSum;prolongLBSumSq;makespanAbs;makespanSPProlong;makespanD0Prolong;makespanLBProlong
 
         printSummary(params.summaryPrefix, status, disturbance, params.disturbanceQuantum, params.disturbanceSeed,
-                     avgBaseTime, avgLbTime, avgTravelTime, prolongSum, prolongSumSq, makespanAbs, makespanProlong);
+                spSum,d0Sum,lbSum,travelTimeSum,travelTimeSumSq,prolongSpSum,prolongSpSumSq,
+                prolongD0Sum,prolongD0SumSq,prolongLBSum,prolongLBSumSq,makespanAbs,makespanSPProlong,makespanD0Prolong,makespanLBProlong);
     }
     
     private static boolean allDone(List<Agent> agents) {
@@ -416,23 +452,31 @@ public class ScenarioCreator {
 		return sum / n;
 	}
 
-    /* status;dprob;dquant;dseed;avgBase;avgLb;avgTravel;prolongSum;prolongSumSq;makespanAbs;makespanRel */
     private static void printSummary(String prefix, Status status, double dprob, int dquant, int dseed,
-                                     long avgBase, long avgLb, long avgTravel, long prolongSum, long prolongSumSq,
-                                     long makespanAbs,
-                                     long makespanRel) {
+                                     long spSum, long d0Sum, long lbSum, long travelTimeSum, long travelTimeSumSq, long prolongSpSum, long prolongSpSumSq, long
+                                     prolongD0Sum, long prolongD0SumSq, long prolongLBSum, long prolongLBSumSq, long makespanAbs, long makespanSPProlong,
+                                     long makespanD0Prolong, long makespanLBProlong) {
         System.out.println(prefix +
                 status.toString() + ";" +
                 dprob + ";" +
                 dquant + ";" +
                 dseed + ";" +
-                avgBase + ";" +
-                avgLb + ";" +
-                avgTravel + ";" +
-                prolongSum + ";" +
-                prolongSumSq + ";" +
+                spSum + ";" +
+                d0Sum + ";" +
+                lbSum + ";" +
+                travelTimeSum + ";" +
+                travelTimeSumSq + ";" +
+                prolongSpSum + ";" +
+                prolongSpSumSq + ";" +
+                prolongD0Sum + ";" +
+                prolongD0SumSq + ";" +
+                prolongLBSum + ";" +
+                prolongLBSumSq + ";" +
                 makespanAbs + ";" +
-                makespanRel + ";");
+                makespanSPProlong + ";" +
+                makespanD0Prolong + ";" +
+                makespanLBProlong + ";");
+
     }
 
 	static long sd(long sumSq, long mean, long n) {

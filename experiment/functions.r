@@ -4,24 +4,44 @@ library(RColorBrewer)
 #install.packages('gridExtra')
 library(gridExtra)
 
+rmtrackColor <-"#E69F00"
+rmtrackShape <- 1
+allstopColor <- "#56B4E9"
+allstopShape <- 2
+orcaColor <- "#009E73"
+orcaShape <- 3
+
 pd <- position_dodge(0)
 
 load.and.preprocess <- function(env) {
   dir <- paste("instances/",env, sep="")
   runs <- read.csv(file=paste(dir, "/data.out.head", sep=""), head=TRUE, sep=";")
   runs <- runs[order(runs$instance, runs$alg),]
-
+  
+  runs$avgTravel[runs$status != "SUCCESS"] <- NA
+  runs$prolongSum[runs$status != "SUCCESS"] <- NA
+  runs$prolongSumSq[runs$status != "SUCCESS"] <- NA
+  runs$makespanAbs[runs$status != "SUCCESS"] <- NA
+  runs$makespanRel[runs$status != "SUCCESS"] <- NA
+  
   maxagents <<- max(runs$nagents) + 3
 
   return(runs) 
 }
 
+common.rmtrack.orca.runs <- function(runs) {
+  solved.by.rmtrack <- unique(runs[runs$alg=="RMTRACK" & runs$status == "SUCCESS", c("instance","dprob")])
+  solved.by.orca <- unique(runs[runs$alg=="ORCA" & runs$status == "SUCCESS", c("instance","dprob")])
+  common <- merge(solved.by.rmtrack, solved.by.orca)
+  common.runs <- merge(common, runs[runs$alg=="ORCA" | runs$alg=="RMTRACK",])
+  return(common.runs)
+}
+
 avgtravel.vs.disturbance <- function(runs) {
-  nrobots <- max(runs$nagents)
-  avgbase <- mean(runs$avgBase, na.rm=TRUE)
-  avgbase2 <- mean(runs$avgTravel[runs$dprob == 0], na.rm=TRUE)
+  subruns <- runs[runs$alg=="RMTRACK" | runs$alg=="ALLSTOP", ]
+  nrobots <- max(subruns$nagents)
   
-  travel <- ddply(runs, .(dprob, alg), summarise,  
+  travel <- ddply(subruns, .(dprob, alg), summarise,  
                   N = sum(!is.na(avgTravel)),
                   mean = mean(avgTravel),
                   meanLb = mean(avgLb),
@@ -31,28 +51,21 @@ avgtravel.vs.disturbance <- function(runs) {
   travel$sd = sqrt(travel$prolongSumSq/(travel$N*nrobots) - (travel$prolongSum/(travel$N*nrobots))^2)
   
   dprob <- unique(travel$dprob)
-  lowbound <- avgbase2 / (1-unique(travel$dprob))
-  aallstop <- avgbase2 / (1-unique(travel$dprob))^nrobots
-  
-  additional_lb <- data.frame(dprob, N=0, alg="LOW BOUND", mean=lowbound, sd=0, se=0, type='bound')
-  #additional_aal <- data.frame(dprob, N=0, alg="UP BOUND", mean=aallstop, sd=0, se=0, type='bound')
-  merged <- rbind(travel, additional_lb)
   
   plot <- ggplot(travel, aes(x=dprob*100, y=mean/1000, color=alg, shape=alg)) +
-    geom_line(data=additional_lb, mapping=aes(x=dprob*100, y=mean/1000), size=0.7, color="#555555", linetype="dashed") +
+    geom_line(data=travel[travel$alg=="RMTRACK",], mapping=aes(x=dprob*100, y=meanLb/1000), size=0.7, color="#555555", linetype="dashed") +
     geom_errorbar(aes(ymin=(mean-sd)/1000, ymax=(mean+sd)/1000), width=4, position=pd, size=0.5, alpha=0.5) +
     geom_line(size=1, position=pd) +
     #geom_line(size=0.5, mapping=aes(y=meanLb/1000), color="red") + 
     geom_point(size=3, position=pd, fill="white") +   
     scale_y_continuous(name="avg. travel time [s]") +
     scale_x_continuous(name="disturbance intensity [%]") +  
-    scale_color_discrete(name="Method: ") +
-    scale_shape(name="Method: ") +
-    #geom_hline(yintercept=avgbase2/1000, linetype='dashed', show_guide = TRUE, name='Move duration') +
+    #scale_color_discrete(name="Method: ") +
+    #scale_shape(name="Method: ") +
     #geom_hline(yintercept=avgbase/1000, linetype='dotted', show_guide = TRUE, name='Move duration') +
     #scale_linetype_manual(values = c("data"="solid","bound"="dotted")) +
-    #scale_color_manual(values = c("ALLSTOP"="#CC6666","RMTRACK"="#9999CC", "LOW BOUND"="#888888", "UP BOUND"="gray"), name="Method: ") +
-    #scale_shape_manual(values = c("ALLSTOP"=0,"RMTRACK"=1), name="Method: ") +
+    scale_color_manual(values = c("ALLSTOP"=allstopColor,"RMTRACK"=rmtrackColor), name="Method: ") +
+    scale_shape_manual(values = c("ALLSTOP"=allstopShape,"RMTRACK"=rmtrackShape), name="Method: ") +
     theme_bw() +
     coord_cartesian(ylim = c(0, 200)) +
     ggtitle(paste("Avg. travel time (", nrobots, " robots)", sep=""))
@@ -60,17 +73,56 @@ avgtravel.vs.disturbance <- function(runs) {
     return(plot)
 }
 
+avgtravel.vs.disturbance.common.only <- function(runs) {
+  subruns <- common.rmtrack.orca.runs(runs)
+  nrobots <- max(subruns$nagents)
+  
+  travel <- ddply(subruns, .(dprob, alg), summarise,  
+                  N = sum(!is.na(avgTravel)),
+                  mean = mean(avgTravel),
+                  prolongSum = sum(prolongSum, na.rm=TRUE),
+                  prolongSumSq = sum(prolongSumSq, na.rm=TRUE))
+  travel$sd = sqrt(travel$prolongSumSq/(travel$N*nrobots) - (travel$prolongSum/(travel$N*nrobots))^2)
+  
+  plot <- ggplot(travel, aes(x=dprob*100, y=mean/1000, color=alg, shape=alg)) +
+    geom_errorbar(aes(ymin=(mean-sd)/1000, ymax=(mean+sd)/1000), width=4, position=pd, size=0.5, alpha=0.5) +
+    geom_line(size=1, position=pd) +
+    geom_point(size=3, position=pd, fill="white") +   
+    scale_y_continuous(name="avg. travel time [s]") +
+    scale_x_continuous(limits=c(-2, 55), name="disturbance intensity [%]") +  
+    scale_color_manual(values = c("ORCA"=orcaColor,"RMTRACK"=rmtrackColor), name="Method: ") +
+    scale_shape_manual(values = c("ORCA"=orcaShape,"RMTRACK"=rmtrackShape), name="Method: ") +
+    theme_bw() +
+    coord_cartesian(ylim = c(-5, 200)) +
+    ggtitle(paste("Avg. travel time (", nrobots, " robots)", sep=""))
+  
+  return(plot)
+}
+
+successrate.vs.disturbance <- function(runs) {
+  subruns <- runs[runs$alg=="RMTRACK" | runs$alg=="ORCA", ]
+  nrobots <- max(subruns$nagents)
+  successrate <- ddply(subruns, .(dprob, alg), summarise,                     
+                       successrate = sum(status=="SUCCESS") / length(status)
+  )
+  
+  plot <- ggplot(successrate, aes(dprob*100, successrate*100, color=alg, shape=alg)) + 
+    geom_point(size=3) + geom_line(size=1) +
+    scale_y_continuous(limits=c(0,100), name=("instances solved [%]")) +  
+    scale_x_continuous(limits=c(-2,55), name=("disturbance intensity [%]")) +
+    scale_color_manual(values = c("ORCA"=orcaColor,"RMTRACK"=rmtrackColor), name="Method: ") +
+    scale_shape_manual(values = c("ORCA"=orcaShape,"RMTRACK"=rmtrackShape), name="Method: ") +
+    theme_bw() +
+    ggtitle(paste("Success rate (", nrobots, " robots)", sep=""))
+  
+  return(plot)
+}
+
+
+
+
 ##################### OLD CODE ########################
 
-common.runs <- function(runs, algs) {
-  solved.by.all <- unique(runs$instance)
-  for (alg in algs) {
-    solved.by.all <- intersect(solved.by.all, unique(runs[runs$alg==alg & runs$status=="SUCCESS", "instance"]))                              
-  }
-  
-  common.runs <- runs[is.element(runs$instance, solved.by.all) & is.element(runs$alg,algs), ] 
-  return(common.runs)
-}
 
 successrate.nagents <- function(runs) {
   #xbreaks <- unique(runs$nagents)

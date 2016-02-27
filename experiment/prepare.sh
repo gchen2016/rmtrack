@@ -33,7 +33,7 @@ function generate_instance_set {
 
             for alg in $algs
             do
-                dprob="0s2s6s8s10s15s30s40s50"
+                dprob="0s2s4s6s8s10s15s20s30s40s50"
 
                 summaryprefix="$instance;$nagents;$radius;$seed;$timestep;$maxtime;$alg;"
                 echo -method $alg -problemfile $instancefile -timestep $timestep -maxtime $maxtime -timeout $maxtime -dseed 1 -dprob $dprob -dquant 1000 -summaryprefix "$summaryprefix" >> $instancefolder/data.in
@@ -42,7 +42,7 @@ function generate_instance_set {
             echo Finished instance no $instance. Agents: $nagents. Seed: $seed.
         done
     done
-    echo "instance;nagents;radius;seed;timestep;maxtime;alg;status;dprob;dquant;dseed;avgBase;avgLb;avgTravel;prolongSum;prolongSumSq;makespanAbs;makespanRel;" > $instancefolder/head
+    echo "instance;nagents;radius;seed;timestep;maxtime;alg;status;dprob;dquant;dseed;spSum;d0Sum;lbSum;travelTimeSum;travelTimeSumSq;prolongSpSum;prolongSpSumSq;prolongD0Sum;prolongD0SumSq;prolongLBSum;prolongLBSumSq;makespanAbs;makespanSPProlong;makespanD0Prolong;makespanLBProlong;" > $instancefolder/head
     echo Done. Created $instance instances at $denvxml environment. Instances stored in $instancefolder.
 }
 
