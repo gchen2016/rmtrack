@@ -131,10 +131,9 @@ public class ORCAAgent extends Agent {
         return traj;
     }
 
-    private void doStep(float timeStep) {
+    private void doStep(int currentTime, float timeStep) {
 
         LOGGER.trace(getName() + " -- doStep");
-
 
         updateNeighborsFromBlackboard();
 
@@ -147,6 +146,9 @@ public class ORCAAgent extends Agent {
 
         rvoAgent.computeNeighbors(kdTree);
         Vector2 newVelocity = rvoAgent.computeNewVelocity(timeStep);
+        if (isDisturbed(currentTime)) {
+            newVelocity = new Vector2(0,0);
+        }
         rvoAgent.update(timeStep, newVelocity);
 
         PositionBlackboard.recordNewPosition(getName(), rvoAgent.id_, rvoAgent.position_.toPoint2d(), rvoAgent.velocity_.toVector2d(), rvoAgent.radius_);
@@ -199,9 +201,13 @@ public class ORCAAgent extends Agent {
 
     @Override
     public void update(int t_current_ms, int t_next_ms, List<Agent> agents) {
-        float timeStep = (float) (t_current_ms - lastTickTime);
-        lastTickTime = t_current_ms;
-        doStep(timeStep);
+
+        if (!isAtGoal()) {
+            travelTime = t_current_ms;
+        }
+
+        float timeStep = (float) (t_next_ms - t_current_ms);
+        doStep(t_current_ms, timeStep);
     }
 
     @Override

@@ -331,9 +331,16 @@ public class ScenarioCreator {
         long avgLbTime = avg(lbTimeSum, n);
         long avgTravelTime = avg(travelTimeSum, n);
 
+        Status status;
+        if (allDone(agents)) {
+            status = Status.SUCCESS;
+        } else {
+            status = Status.FAIL;
+        }
+
         // status;dprob;dquant;dseed;avgBase;avgLb;avgTravel;prolongSum;prolongSumSq;makespanAbs;makespanRel
 
-        printSummary(params.summaryPrefix, Status.SUCCESS, disturbance, params.disturbanceQuantum, params.disturbanceSeed,
+        printSummary(params.summaryPrefix, status, disturbance, params.disturbanceQuantum, params.disturbanceSeed,
                      avgBaseTime, avgLbTime, avgTravelTime, prolongSum, prolongSumSq, makespanAbs, makespanProlong);
     }
     
