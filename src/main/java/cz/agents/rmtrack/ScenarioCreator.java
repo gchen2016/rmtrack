@@ -331,11 +331,11 @@ public class ScenarioCreator {
 
             prolongSpSum += prolongSp;
             prolongD0Sum += prolongD0;
-            prolongLBSum += prolongLBSum;
+            prolongLBSum += prolongLB;
 
             prolongSpSumSq += prolongSp * prolongSp;
-            prolongD0SumSq += prolongD0 * prolongSp;
-            prolongLBSumSq += prolongLBSum * prolongSp;
+            prolongD0SumSq += prolongD0 * prolongD0;
+            prolongLBSumSq += prolongLB * prolongLB;
 
             if (agent.travelTime > makespanAbs)
                 makespanAbs = agent.travelTime;
