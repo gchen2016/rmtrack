@@ -18,11 +18,18 @@ load.and.preprocess <- function(env) {
   runs <- read.csv(file=paste(dir, "/data.out.head", sep=""), head=TRUE, sep=";")
   runs <- runs[order(runs$instance, runs$alg),]
   
-  runs$avgTravel[runs$status != "SUCCESS"] <- NA
-  runs$prolongSum[runs$status != "SUCCESS"] <- NA
-  runs$prolongSumSq[runs$status != "SUCCESS"] <- NA
-  runs$makespanAbs[runs$status != "SUCCESS"] <- NA
-  runs$makespanRel[runs$status != "SUCCESS"] <- NA
+  runs$travelTimeSum[runs$status != "SUCCESS"] <- NA
+  runs$travelTimeSumSq[runs$status != "SUCCESS"] <- NA
+  
+  runs$spSum[runs$status != "SUCCESS"] <- NA
+  runs$d0Sum[runs$status != "SUCCESS"] <- NA
+  runs$lbSum[runs$status != "SUCCESS"] <- NA
+  
+  
+  runs$prolongSpSum[runs$status != "SUCCESS"] <- NA
+  runs$prolongSpSumSq[runs$status != "SUCCESS"] <- NA
+  runs$prolongLBSum[runs$status != "SUCCESS"] <- NA
+  runs$prolongLBSumSq[runs$status != "SUCCESS"] <- NA  
   
   maxagents <<- max(runs$nagents) + 3
 
@@ -42,24 +49,45 @@ avgtravel.vs.disturbance <- function(runs) {
   nrobots <- max(subruns$nagents)
   
   travel <- ddply(subruns, .(dprob, alg), summarise,  
-                  N = sum(!is.na(avgTravel)),
-                  mean = mean(avgTravel),
-                  meanLb = mean(avgLb),
-                  prolongSum = sum(prolongSum, na.rm=TRUE),
-                  prolongSumSq = sum(prolongSumSq, na.rm=TRUE))
+                  N = sum(!is.na(travelTimeSum)),
+                  travelTimeSum = sum(travelTimeSum, na.rm=TRUE),
+                  travelTimeSumSq = sum(travelTimeSumSq, na.rm=TRUE),
+                  lbSum = sum(lbSum, na.rm=TRUE),
+                  spSum = sum(spSum, na.rm=TRUE),
+                  prolongSpSum = sum(prolongSpSum, na.rm=TRUE),
+                  prolongSpSumSq = sum(prolongSpSumSq, na.rm=TRUE),
+                  prolongLBSum = sum(prolongLBSum, na.rm=TRUE),
+                  prolongLBSumSq = sum(prolongLBSumSq, na.rm=TRUE))
+                  
+  travel$travelTimeAvg <- travel$travelTimeSum/(travel$N*nrobots)
+  travel$travelTimeSd <- sqrt((travel$travelTimeSumSq/(travel$N*nrobots)) - travel$travelTimeAvg^2)
   
-  travel$sd = sqrt(travel$prolongSumSq/(travel$N*nrobots) - (travel$prolongSum/(travel$N*nrobots))^2)
+  travel$meanSp <- travel$spSum / (travel$N*nrobots)
+  travel$meanLb <- travel$lbSum / (travel$N*nrobots)
+  
+  travel$prolongSpAvg <- travel$prolongSpSum/(travel$N*nrobots)
+  travel$prolongSpSd <- sqrt((travel$prolongSpSumSq/(travel$N*nrobots)) - travel$prolongSpAvg^2)
+  
+  travel$prolongLBAvg <- travel$prolongLBSum/(travel$N*nrobots)
+  travel$prolongLBSd <- sqrt((travel$prolongLBSumSq/(travel$N*nrobots)) - travel$prolongLBAvg^2)
+  
+  travel$mean <-travel$travelTimeAvg
+  travel$sd <- travel$prolongSpSd
   
   dprob <- unique(travel$dprob)
   
+  travel$mean[travel$alg=="ALLSTOP" & travel$N==0] <- 600000
+  travel$sd[travel$alg=="ALLSTOP" & travel$N==0] <- 0
+  
   plot <- ggplot(travel, aes(x=dprob*100, y=mean/1000, color=alg, shape=alg)) +
-    geom_line(data=travel[travel$alg=="RMTRACK",], mapping=aes(x=dprob*100, y=meanLb/1000), size=0.7, color="#555555", linetype="dashed") +
-    geom_errorbar(aes(ymin=(mean-sd)/1000, ymax=(mean+sd)/1000), width=4, position=pd, size=0.5, alpha=0.5) +
+    geom_hline(yintercept=max(travel[travel$alg=="RMTRACK","meanSp"], na.rm=TRUE)/1000, linetype='dotted', size=1, color="#888888") +
+    geom_line(data=travel[travel$alg=="RMTRACK",], mapping=aes(x=dprob*100, y=meanLb/1000), size=1, color="#555555", linetype="dashed") +
+    geom_errorbar(aes(ymin=(mean-sd)/1000, ymax=(mean+sd)/1000), width=4, position=pd, size=0.7, alpha=0.5) +
     geom_line(size=1, position=pd) +
     #geom_line(size=0.5, mapping=aes(y=meanLb/1000), color="red") + 
     geom_point(size=3, position=pd, fill="white") +   
     scale_y_continuous(name="avg. travel time [s]") +
-    scale_x_continuous(name="disturbance intensity [%]") +  
+    scale_x_continuous(name="disturbance intensity [%]", breaks=c(0,25,50)) +  
     #scale_color_discrete(name="Method: ") +
     #scale_shape(name="Method: ") +
     #geom_hline(yintercept=avgbase/1000, linetype='dotted', show_guide = TRUE, name='Move duration') +
@@ -67,8 +95,8 @@ avgtravel.vs.disturbance <- function(runs) {
     scale_color_manual(values = c("ALLSTOP"=allstopColor,"RMTRACK"=rmtrackColor), name="Method: ") +
     scale_shape_manual(values = c("ALLSTOP"=allstopShape,"RMTRACK"=rmtrackShape), name="Method: ") +
     theme_bw() +
-    coord_cartesian(ylim = c(0, 200)) +
-    ggtitle(paste("Avg. travel time (", nrobots, " robots)", sep=""))
+    coord_cartesian(ylim = c(-20, 220), xlim=c(-5, 55)) +
+    ggtitle(paste("Avg. travel time (", nrobots, " rob.)", sep=""))
     
     return(plot)
 }
@@ -78,23 +106,40 @@ avgtravel.vs.disturbance.common.only <- function(runs) {
   nrobots <- max(subruns$nagents)
   
   travel <- ddply(subruns, .(dprob, alg), summarise,  
-                  N = sum(!is.na(avgTravel)),
-                  mean = mean(avgTravel),
-                  prolongSum = sum(prolongSum, na.rm=TRUE),
-                  prolongSumSq = sum(prolongSumSq, na.rm=TRUE))
-  travel$sd = sqrt(travel$prolongSumSq/(travel$N*nrobots) - (travel$prolongSum/(travel$N*nrobots))^2)
+                  N = sum(!is.na(travelTimeSum)),
+                  travelTimeSum = sum(travelTimeSum, na.rm=TRUE),
+                  travelTimeSumSq = sum(travelTimeSumSq, na.rm=TRUE),
+                  spSum = sum(spSum, na.rm=TRUE),
+                  prolongSpSum = sum(prolongSpSum, na.rm=TRUE),
+                  prolongSpSumSq = sum(prolongSpSumSq, na.rm=TRUE))
+  
+  travel$travelTimeAvg <- travel$travelTimeSum/(travel$N*nrobots)
+  travel$travelTimeSd <- sqrt((travel$travelTimeSumSq/(travel$N*nrobots)) - travel$travelTimeAvg^2)
+  
+  travel$meanSp <- travel$spSum / (travel$N*nrobots)
+  
+  travel$prolongSpAvg <- travel$prolongSpSum/(travel$N*nrobots)
+  travel$prolongSpSd <- sqrt((travel$prolongSpSumSq/(travel$N*nrobots)) - travel$prolongSpAvg^2)
+  
+  travel$mean <-travel$travelTimeAvg
+  travel$sd <- travel$prolongSpSd
+  
+  
+  travel$mean[travel$N < 5] <- NA
+  travel$sd[travel$N < 5] <- 0
   
   plot <- ggplot(travel, aes(x=dprob*100, y=mean/1000, color=alg, shape=alg)) +
+    geom_hline(yintercept=max(travel[travel$alg=="RMTRACK","meanSp"], na.rm=TRUE)/1000, linetype='dotted', size=1, color="#888888") +
     geom_errorbar(aes(ymin=(mean-sd)/1000, ymax=(mean+sd)/1000), width=4, position=pd, size=0.5, alpha=0.5) +
     geom_line(size=1, position=pd) +
     geom_point(size=3, position=pd, fill="white") +   
     scale_y_continuous(name="avg. travel time [s]") +
-    scale_x_continuous(limits=c(-2, 55), name="disturbance intensity [%]") +  
+    scale_x_continuous(limits=c(-2, 52), name="disturbance intensity [%]", breaks=c(0,25,50)) +  
     scale_color_manual(values = c("ORCA"=orcaColor,"RMTRACK"=rmtrackColor), name="Method: ") +
     scale_shape_manual(values = c("ORCA"=orcaShape,"RMTRACK"=rmtrackShape), name="Method: ") +
     theme_bw() +
-    coord_cartesian(ylim = c(-5, 200)) +
-    ggtitle(paste("Avg. travel time (", nrobots, " robots)", sep=""))
+    coord_cartesian(ylim = c(-20, 220), xlim=c(-5, 55)) +
+    ggtitle(paste("Avg. travel time (", nrobots, " rob.)", sep=""))
   
   return(plot)
 }
@@ -109,11 +154,12 @@ successrate.vs.disturbance <- function(runs) {
   plot <- ggplot(successrate, aes(dprob*100, successrate*100, color=alg, shape=alg)) + 
     geom_point(size=3) + geom_line(size=1) +
     scale_y_continuous(limits=c(0,100), name=("instances solved [%]")) +  
-    scale_x_continuous(limits=c(-2,55), name=("disturbance intensity [%]")) +
+    scale_x_continuous(limits=c(-2,52), name=("disturbance intensity [%]"), breaks=c(0,25,50)) +
     scale_color_manual(values = c("ORCA"=orcaColor,"RMTRACK"=rmtrackColor), name="Method: ") +
     scale_shape_manual(values = c("ORCA"=orcaShape,"RMTRACK"=rmtrackShape), name="Method: ") +
+    coord_cartesian(ylim = c(-10, 110), xlim=c(-5, 55)) +
     theme_bw() +
-    ggtitle(paste("Success rate (", nrobots, " robots)", sep=""))
+    ggtitle(paste("Success rate (", nrobots, " rob.)", sep=""))
   
   return(plot)
 }
