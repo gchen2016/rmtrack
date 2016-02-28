@@ -20,7 +20,7 @@ cd experiment
 
 # generate instances
 #echo -e "\n >>>> Generating the instances...\n"
-./prepare.sh
+#./prepare.sh
 
 
 CPUS=2 # no of CPU to be used for the experiment (how many simulations to run in parallel)
@@ -33,14 +33,14 @@ echo -e "\n >>>> Running the experiment in empty hall...\n"
 
 
 # run the experiment in ubremen environment
-echo -e "\n >>>> Running the experiment in ubremen...\n"
-./run.sh ubremen-r27 $CPUS data.in data.out $MEM
-./addhead.sh ubremen-r27
+#echo -e "\n >>>> Running the experiment in ubremen...\n"
+#./run.sh ubremen-r27 $CPUS data.in data.out $MEM
+#./addhead.sh ubremen-r27
 
 # run the experiment in warehouse environment
-echo -e "\n >>>> Running the experiment in warehouse...\n"  
-./run.sh warehouse-r25 $CPUS data.in data.out $MEM
-./addhead.sh warehouse-r25
+#echo -e "\n >>>> Running the experiment in warehouse...\n"  
+#./run.sh warehouse-r25 $CPUS data.in data.out $MEM
+#./addhead.sh warehouse-r25
 
 
 # make plots from the data

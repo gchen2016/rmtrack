@@ -35,6 +35,8 @@ public abstract class Agent {
 
     abstract public Point getPosition();
 
+    abstract public Point getPlannedPosition();
+
     public float getRadius() {
         return radius;
     }

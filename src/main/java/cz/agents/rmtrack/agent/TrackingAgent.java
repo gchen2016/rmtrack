@@ -2,11 +2,14 @@ package cz.agents.rmtrack.agent;
 
 import cz.agents.rmtrack.util.Disturbance;
 import tt.euclid2d.Point;
+import tt.euclid2d.Vector;
 import tt.euclid2i.Trajectory;
 
 import java.util.List;
 
 public class TrackingAgent extends Agent {
+    private int currentTime;
+
     public enum TrackingMethod {ALLSTOP, RMTRACK};
 
     private final Trajectory traj;
@@ -30,6 +33,7 @@ public class TrackingAgent extends Agent {
 
     @Override
     public void update(int t_current_ms, int t_next_ms, List<Agent> agents) {
+        this.currentTime = t_current_ms;
         if (!isAtGoal()) {
             travelTime = t_current_ms;
         }
@@ -68,6 +72,16 @@ public class TrackingAgent extends Agent {
             currentlyDisturbed = false;
             if (proceed) {
                 planPos += deltaT;
+
+                Point oldPos = traj.get(planPos).toPoint2d();
+                Point newPos = traj.get(planPos+deltaT).toPoint2d();
+
+                // print current velocity
+                Vector vel = new Vector(newPos);
+                vel.sub(oldPos);
+
+                LOGGER.debug(id + ": velocity " + (vel.length() / deltaT));
+                
             }
         }
     }
@@ -109,5 +123,10 @@ public class TrackingAgent extends Agent {
 
     public boolean isCurrentlyWaiting() {
         return currentlyWaiting;
+    }
+
+    @Override
+    public Point getPlannedPosition() {
+        return traj.get(this.currentTime).toPoint2d();
     }
 }

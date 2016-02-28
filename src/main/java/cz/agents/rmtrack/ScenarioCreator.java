@@ -53,7 +53,8 @@ public class ScenarioCreator {
     enum Method {
         ALLSTOP,
         RMTRACK,
-        ORCA}
+        ORCA,
+        ORCASP}
 
 
     private static EarliestArrivalProblem problem;
@@ -119,14 +120,13 @@ public class ScenarioCreator {
 
         switch (method) {
             case ALLSTOP:
-                solveTracking(problem, TrackingAgent.TrackingMethod.ALLSTOP, params);
-                break;
-
             case RMTRACK:
-                solveTracking(problem, TrackingAgent.TrackingMethod.RMTRACK, params);
+            case ORCA:
+                solveTracking(problem, method, params);
                 break;
 
-            case ORCA:
+
+            case ORCASP:
                 solveORCA(problem, params);
                 break;
 
@@ -134,8 +134,6 @@ public class ScenarioCreator {
                 throw new RuntimeException("Unknown method");
 
         }
-
-
     }
 
     private static void killAt(final long killAtMs, final String summaryPrefix, final int clusters) {
@@ -155,7 +153,7 @@ public class ScenarioCreator {
 	}
 
 	private static void solveTracking(final EarliestArrivalProblem problem,
-                                      TrackingAgent.TrackingMethod trackingMethod, final Parameters params) {
+                                      Method method, final Parameters params) {
 
         // find minimum lengths
         int[] durationsOverShortestPath = Util.computeDurationOverShortestPath(problem);
@@ -168,6 +166,7 @@ public class ScenarioCreator {
             if (params.showVis) {
                 VisUtil.initVisualization(problem.getEnvironment(), "RMTRACK", params.bgImageFile, params.timeStep/2);
                 VisUtil.visualizeEarliestArrivalProblem(problem);
+                visualizeTrajectories(trajs, params.timeStep);
             }
 
             Disturbance disturbance = new Disturbance((float) disturbanceProb, params.disturbanceQuantum, params.disturbanceSeed, problem.nAgents());
@@ -176,20 +175,50 @@ public class ScenarioCreator {
 
             List<Agent> agents = new LinkedList<>();
             for (int i=0; i < problem.nAgents(); i++) {
-                agents.add(i,
-                        new TrackingAgent(i,
+                Agent agent = null;
+
+                switch (method) {
+                    case ALLSTOP:
+                        agent = new TrackingAgent(i,
                                 problem.getStart(i).toPoint2d(),
                                 problem.getTarget(i).toPoint2d(),
                                 problem.getBodyRadius(i),
                                 problem.getMaxSpeed(i),
                                 trajs[i],
                                 disturbance,
-                                trackingMethod));
+                                TrackingAgent.TrackingMethod.ALLSTOP);
+                        break;
+
+                    case RMTRACK:
+                        agent = new TrackingAgent(i,
+                                problem.getStart(i).toPoint2d(),
+                                problem.getTarget(i).toPoint2d(),
+                                problem.getBodyRadius(i),
+                                problem.getMaxSpeed(i),
+                                trajs[i],
+                                disturbance,
+                                TrackingAgent.TrackingMethod.RMTRACK);
+                        break;
+
+                    case ORCA:
+                        agent = new ORCAAgent(i,
+                                problem.getStart(i).toPoint2d(),
+                                problem.getTarget(i).toPoint2d(),
+                                problem.getEnvironment(),
+                                trajs[i],
+                                problem.getBodyRadius(i),
+                                problem.getMaxSpeed(i),
+                                disturbance,
+                                new Random(params.disturbanceSeed),
+                                params.showVis);
+                }
+
+                agents.add(i, agent);
             }
 
             // simulate execution
             simulate(problem, agents, params);
-            printStatistics(agents, disturbanceProb,  durationsOverShortestPath, d0Durations, lowerBoundDurations, params);
+            computeStatistics(agents, disturbanceProb,  durationsOverShortestPath, d0Durations, lowerBoundDurations, params);
             VisManager.unregisterLayers();
         }
 
@@ -228,7 +257,7 @@ public class ScenarioCreator {
 
             int[] zeros = new int[problem.nAgents()];
 
-            printStatistics(agents, disturbanceProb, durationsOverShortestPath, zeros, zeros, params);
+            computeStatistics(agents, disturbanceProb, durationsOverShortestPath, zeros, zeros, params);
             VisManager.unregisterLayers();
         }
 
@@ -293,7 +322,7 @@ public class ScenarioCreator {
         }
     }
 
-    private static void printStatistics(List<Agent> agents, double disturbance,  int[] shortestPathDurations, int[] d0Durations, int[] lbDurations, Parameters params) {
+    private static void computeStatistics(List<Agent> agents, double disturbance, int[] shortestPathDurations, int[] d0Durations, int[] lbDurations, Parameters params) {
         long spSum = 0;
         long d0Sum = 0;
         long lbSum = 0;
@@ -321,6 +350,8 @@ public class ScenarioCreator {
             spSum += shortestPathDurations[i];
             d0Sum += d0Durations[i];
             lbSum += lbDurations[i];
+
+            LOGGER.debug("Agent " + i + " finished at " + agent.travelTime);
 
             travelTimeSum += agent.travelTime;
             travelTimeSumSq += travelTimeSum * travelTimeSum;
@@ -372,7 +403,6 @@ public class ScenarioCreator {
     }
     
     private static boolean allDone(List<Agent> agents) {
-        final double EPS = 0.9;
     	for (final Agent agent : agents) {
             agent.isAtGoal();
     		if (!agent.isAtGoal()) {
@@ -383,7 +413,7 @@ public class ScenarioCreator {
 	}
 
 
-	private static void initAgentVisualization(final List<Agent> agents, int timeStep) {
+    private static void visualizeTrajectories(Trajectory[] trajs, int timestep) {
         // trajectories
         VisManager.registerLayer(
                 KeyToggleLayer.create("t", true,
@@ -391,15 +421,7 @@ public class ScenarioCreator {
 
                             @Override
                             public Trajectory[] getTrajectories() {
-                                Trajectory[] trajsArr = new Trajectory[agents.size()];
-
-                                for (int i = 0; i < trajsArr.length; i++) {
-                                    Agent agent = agents.get(i);
-                                    if (agent instanceof TrackingAgent) {
-                                        trajsArr[i] = ((TrackingAgent) agent).getTrajectory();
-                                    }
-                                }
-                                return trajsArr;
+                                return trajs;
                             }
                         },new ColorProvider() {
 
@@ -407,7 +429,11 @@ public class ScenarioCreator {
                             public Color getColor(int i) {
                                 return AgentColors.getColorForAgent(i);
                             }
-                        }, 3, timeStep)));
+                        }, 3, timestep)));
+    }
+
+	private static void initAgentVisualization(final List<Agent> agents, int timeStep) {
+
 		
         // positions
         VisManager.registerLayer(
@@ -425,17 +451,19 @@ public class ScenarioCreator {
                          fillColor = Color.black;
                      }
 
-                     Color textColor = Color.WHITE;
+                     Color textColor = Color.BLUE;
 
                      if (agents.get(i) instanceof TrackingAgent) {
                          TrackingAgent agent = (TrackingAgent) agents.get(i);
                          if (agent.isCurrentlyWaiting()) {
-                             textColor = Color.DARK_GRAY;
+                             textColor = Color.RED;
                          }
                      }
 
                 	 list.add(new LabeledCircleLayer.LabeledCircle<tt.euclid2d.Point>(pos,
-                             (int) agents.get(i).getRadius(), "" + i  , AgentColors.getColorForAgent(i),
+                             (int) agents.get(i).getRadius(),
+                             "" + i + " " + String.format("%.2f", (double) agents.get(i).travelTime / 1000.0),
+                             AgentColors.getColorForAgent(i),
                              fillColor ,
                              textColor));
                  }
@@ -444,6 +472,29 @@ public class ScenarioCreator {
              }
 
          }, new tt.euclid2d.vis.ProjectionTo2d())));
+
+
+        // planned positions
+        VisManager.registerLayer(
+                KeyToggleLayer.create("x", true,
+                        LabeledCircleLayer.create(new LabeledCircleLayer.LabeledCircleProvider<tt.euclid2d.Point>() {
+
+                            @Override
+                            public Collection<LabeledCircleLayer.LabeledCircle<tt.euclid2d.Point>> getLabeledCircles() {
+                                LinkedList<LabeledCircleLayer.LabeledCircle<tt.euclid2d.Point>> list = new LinkedList<LabeledCircleLayer.LabeledCircle<tt.euclid2d.Point>>();
+                                for (int i = 0; i < agents.size(); i++) {
+                                    tt.euclid2d.Point pos = agents.get(i).getPlannedPosition();
+
+                                    list.add(new LabeledCircleLayer.LabeledCircle<tt.euclid2d.Point>(pos,
+                                            (int) agents.get(i).getRadius(), "" + i  , AgentColors.getColorForAgent(i),
+                                            null ,
+                                            Color.DARK_GRAY));
+                                }
+
+                                return list;
+                            }
+
+                        }, new tt.euclid2d.vis.ProjectionTo2d())));
  	}
 
     enum Status {SUCCESS, FAIL, TIMEOUT}

@@ -72,9 +72,9 @@ avgtravel.vs.disturbance <- function(runs) {
   travel$prolongLBSd <- sqrt((travel$prolongLBSumSq/(travel$N*nrobots)) - travel$prolongLBAvg^2)
   
   travel$mean <-travel$travelTimeAvg
-  travel$sd <- travel$prolongSpSd
+  travel$sd <- travel$prolongLBSd
   
-  dprob <- unique(travel$dprob)
+  #dprob <- unique(travel$dprob)
   
   travel$mean[travel$alg=="ALLSTOP" & travel$N==0] <- 600000
   travel$sd[travel$alg=="ALLSTOP" & travel$N==0] <- 0

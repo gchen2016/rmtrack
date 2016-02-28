@@ -4,6 +4,8 @@ import cz.agents.rmtrack.util.Disturbance;
 import org.apache.log4j.Logger;
 import org.jgrapht.DirectedGraph;
 import rvolib.*;
+import tt.euclid2d.*;
+import tt.euclid2d.Vector;
 import tt.euclid2i.EvaluatedTrajectory;
 import tt.euclid2i.Line;
 import tt.euclid2i.Point;
@@ -25,7 +27,6 @@ public class ORCAAgent extends Agent {
     private static final float TIME_HORIZON_AGENT = 5000;
     private static final float TIME_HORIZON_OBSTACLE = 1000;
 
-    private static final double NEAR_GOAL_EPS = 0.0f;
     private final Random random;
 
     private RVOAgent rvoAgent;
@@ -42,10 +43,28 @@ public class ORCAAgent extends Agent {
     private boolean showVis;
 
     private Collection<Region> ttObstaclesLessInflated;
-    private double DesiredControlNodeSearchRadius;
+    private double desiredControlNodeSearchRadius;
     private boolean wasDisturbed = false;
+    private int currentTime;
+
+    public ORCAAgent(int id, tt.euclid2d.Point start, tt.euclid2d.Point goal, Environment environment, EvaluatedTrajectory traj,
+                     int agentBodyRadius, float maxSpeed, Disturbance disturbance, Random random, boolean showVis) {
+        this(id, start, goal, environment, agentBodyRadius, maxSpeed, disturbance, random, showVis);
+        desiredControlNodeSearchRadius = 1; // Used to be: ((float) Math.ceil(agentBodyRadius * RADIUS_GRACE_MULTIPLIER) * 3) + 1; // approx. sqrt(2) * 2 * radius
+        desiredControl = new TrajectoryFollowingControl(traj, maxSpeed);
+    }
 
     public ORCAAgent(int id, tt.euclid2d.Point start, tt.euclid2d.Point goal, Environment environment, DirectedGraph<Point, Line> planningGraph,
+                     int agentBodyRadius, float maxSpeed, Disturbance disturbance, Random random, boolean showVis) {
+        this(id, start, goal, environment, agentBodyRadius, maxSpeed, disturbance, random, showVis);
+        desiredControlNodeSearchRadius = longestEdgeLength(planningGraph)+1; // Used to be: ((float) Math.ceil(agentBodyRadius * RADIUS_GRACE_MULTIPLIER) * 3) + 1; // approx. sqrt(2) * 2 * radius
+        desiredControl = new GraphBasedOptimalPolicyController(planningGraph,
+                goal.toPoint2i(), ttObstaclesLessInflated, maxSpeed,
+                desiredControlNodeSearchRadius, showVis);
+
+    }
+
+    public ORCAAgent(int id, tt.euclid2d.Point start, tt.euclid2d.Point goal, Environment environment,
                      int agentBodyRadius, float maxSpeed, Disturbance disturbance, Random random, boolean showVis) {
         super(id, start, goal, agentBodyRadius, maxSpeed, disturbance);
 
@@ -80,12 +99,13 @@ public class ORCAAgent extends Agent {
         ttObstacles.addAll(environment.getObstacles());
 
         this.ttObstaclesLessInflated = Util.inflateRegions(ttObstacles, agentBodyRadius-1);
-
-        DesiredControlNodeSearchRadius = longestEdgeLength(planningGraph)+1; // Used to be: ((float) Math.ceil(agentBodyRadius * RADIUS_GRACE_MULTIPLIER) * 3) + 1; // approx. sqrt(2) * 2 * radius
-
-        desiredControl = new GraphBasedOptimalPolicyController(planningGraph,
-                goal.toPoint2i(), ttObstaclesLessInflated, maxSpeed,
-                DesiredControlNodeSearchRadius, showVis);
+        this.desiredControlNodeSearchRadius = 1;
+        this.desiredControl = new DesiredControl() {
+            @Override
+            public Vector getDesiredControl(tt.euclid2d.Point point) {
+                return new Vector(0,0);
+            }
+        };
 
         kdTree = new KdTree();
 
@@ -137,6 +157,10 @@ public class ORCAAgent extends Agent {
 
         updateNeighborsFromBlackboard();
 
+        if (desiredControl instanceof TrajectoryFollowingControl) {
+            ((TrajectoryFollowingControl) desiredControl).setCurrentTime(currentTime);
+        }
+
         setPreferredVelocity(timeStep);
 
         RVOAgent[] rvoAgents = neighbors.values().toArray(new RVOAgent[neighbors.values().size()]);
@@ -161,6 +185,7 @@ public class ORCAAgent extends Agent {
             wasDisturbed = false;
         }
 
+        LOGGER.debug(id+": velocity "+newVelocity.getLength()+"");
         rvoAgent.update(timeStep, newVelocity);
 
         PositionBlackboard.recordNewPosition(getName(), rvoAgent.id_, rvoAgent.position_.toPoint2d(), rvoAgent.velocity_.toVector2d(), rvoAgent.radius_);
@@ -173,9 +198,11 @@ public class ORCAAgent extends Agent {
         //if (currentPosition.toPoint2i().distance(getCurrentGoal()) < NEAR_GOAL_EPS) {
         //rvoAgent.setPrefVelocity(new Vector2(0, 0));
         //} else {
+
         tt.euclid2d.Vector desiredVelocity = desiredControl.getDesiredControl(rvoAgent.position_.toPoint2d());
         assert !Double.isNaN(desiredVelocity.x) && !Double.isNaN(desiredVelocity.y);
         double desiredSpeed = desiredVelocity.length();
+
         tt.euclid2d.Vector desiredDir = new tt.euclid2d.Vector(desiredVelocity);
         if (desiredDir.length() != 0) {
             desiredDir.normalize();
@@ -213,7 +240,9 @@ public class ORCAAgent extends Agent {
 
     @Override
     public void update(int t_current_ms, int t_next_ms, List<Agent> agents) {
-
+        
+        this.currentTime = t_current_ms;
+        
         if (!isAtGoal()) {
             travelTime = t_current_ms;
         }
@@ -234,5 +263,13 @@ public class ORCAAgent extends Agent {
 
     private String getName() {
         return "a"+id;
+    }
+
+    @Override
+    public tt.euclid2d.Point getPlannedPosition() {
+        if (desiredControl instanceof TrajectoryFollowingControl) {
+            return ((TrajectoryFollowingControl) desiredControl).getTraj().get(this.currentTime).toPoint2d();
+        }
+        return getPosition();
     }
 }
