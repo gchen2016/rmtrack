@@ -2,11 +2,11 @@
 
 # clean temporary files and previous results
 echo -e "\n >>>> Cleaning\n"
-#mvn clean -q
-#rm -f experiment/instances/empty-hall-r25/*.out.*
-#rm -f experiment/instances/ubremen-r27/*.out.*
-#rm -f experiment/instances/warehouse-r25/*.out.*
-#rm -rf experiment/plots
+mvn clean -q
+rm -f experiment/instances/empty-hall-r25/*.out.*
+rm -f experiment/instances/ubremen-r27/*.out.*
+rm -f experiment/instances/warehouse-r25/*.out.*
+rm -rf experiment/plots
 rm -f expermient/solver.jar
 
 # compile the experimental framework
@@ -19,21 +19,20 @@ cp target/robust-tracking-1.0-SNAPSHOT-jar-with-dependencies.jar experiment/solv
 cd experiment
 
 # generate instances
-#echo -e "\n >>>> Generating the instances...\n"
-#./prepare.sh
-
+echo -e "\n >>>> Generating the instances...\n"
+./prepare.sh
 
 CPUS=2 # no of CPU to be used for the experiment (how many simulations to run in parallel)
 MEM=2  # maximum memory used by one simulation run in GBs
 
 # run the experiment in empty-hall environment
-#echo -e "\n >>>> Running the experiment in empty hall...\n"
-#./run.sh empty-hall-r25 $CPUS data.in data.out $MEM  
-#./addhead.sh empty-hall-r25
+echo -e "\n >>>> Running the experiment in empty hall...\n"
+./run.sh empty-hall-r25 $CPUS data.in data.out $MEM  
+./addhead.sh empty-hall-r25
 
 
 # run the experiment in ubremen environment
-echo -e "\n >>>> Running the experiment in ubremen...\n"
+echo -e "\n >>>> Running the experiment in office corridor...\n"
 ./run.sh ubremen-r27 $CPUS data.in data.out $MEM
 ./addhead.sh ubremen-r27
 
@@ -42,8 +41,7 @@ echo -e "\n >>>> Running the experiment in warehouse...\n"
 ./run.sh warehouse-r25 $CPUS data.in data.out $MEM
 ./addhead.sh warehouse-r25
 
-
-# make plots from the data
+# generates PDF plots from the data
 mkdir -p plots
 Rscript makeplots.r
 

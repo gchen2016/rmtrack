@@ -1,71 +1,21 @@
-COBRA -- Complete decentralized method for on-line multi-robot trajectory planning in valid infrastructures
-===========================================================================================================
+RMTRACK -- Robust Multi-robot Trajectory Tracking under Delaying Disturbances  
+=============================================================================
 
-This repository contains an implementation of COBRA algorithm and the dataset used for experimental comparision as described in the paper:
+This repository contains an implementation of RMTRACK algorithm and the dataset used for experimental comparision as described in the paper:
 
-M. Čáp, J. Vokřínek, and A. Kleiner, “Complete decentralized method for on-line multi-robot trajectory planning in valid infrastructures,” in International conference on planning and scheduling, ICAPS 2015, 2015.
+Michal Cap and Jean Gregoire and Emilio Frazzoli: "Provably Safe and Deadlock-Free Execution of Multi-Robot Plans under Delaying Disturbances", In review, 2016.
+
 
 1. Dependencies:
 ----------------
+To run the experiment and process the data, you need GNU parallel, R and other non-standard dependencies. In Ubuntu 14.04 you can install them by running:
 
-To run the experiment and process the data, you need GNU parallel, R and other dependencies. In Ubuntu run:
+$ sudo apt-get install parallel r-cran-plyr r-cran-ggplot2
 
-sudo apt-get install parallel r-cran-plyr r-cran-ggplot2
 
-2. Recomputing the whole experiment:
------------------------------------
+2. Recomputing the experiment:
+------------------------------------
 
 To recompute the entire experiment, run the following command:
 
-$./run-experiment.sh
-
-
-3. Executing single simulation run:
------------------------------------
-
-3.1 Compiling
----------
-The dependencies are managed using Maven. To compile the project and create a jar archive with dependencies run:	
-
-$ mvn package
-
-The jar archive with all dependencies will be in:
-
-target/map4rt-1.0-SNAPSHOT-jar-with-dependencies.jar
-
-Alternatively, you can open the project in your favorite IDE, i.e. in Eclipse.
-
-3.2 Getting started
----------------
-
-A simulation is run by executing cz.agents.rmtrack.ScenarioCreator class.
-
-Parameters:
-  -problemfile 		Path to the xml file with problem description.
-  -method			Specifies method to be used to solve the problem. One of {COBRA, ORCA}.
-  -maxtime			Specifies the maximum time (in miliseconds) considered during trajectory planning.
-  -timestep			The discretization of time-dimension used during trajectory planning.
-  -timeout          The timeout in miliseconds after which the simulation will be terminated
-  -ntasks           Number of random tasks to generate for each robot
-  -seed             Random seed used to generate the random tasks for the robots
-  -showvis          Turns on/off the visualization.
-  
-Detailed information can be derived from the source code, in particular from the method cz.agents.admap.creator.ScenarioCreator.createFromArgs().  
-
-Example: 
---------
-
-The following command will run the COBRA on the example problem instance described in file experiment/instances/ubremen-r27/28.xml with 4 tasks for each robot randomly generated with random seed 8.
-
-$java -jar target/map4rt-1.0-SNAPSHOT-jar-with-dependencies.jar cz.agents.rmtrack.creator.ScenarioCreator -method COBRA -problemfile experiment/instances/ubremen-r27/28.xml -ntasks 4 -timestep 650 -maxtime 600000 -timeout 600000 -seed 8 -showvis
-
-3.3 Visualization control: 
-----------------------
-
-When the visualization window pops-up, use the following keys to toggle various useful visualization layers:
-  m - missions/tasks of agents
-  t - trajectories of agents
-  g - planning graph
-  p - polygons representing obstacles 
-  
-Dragging with right mouse button pressed moves the viewport. Mouse wheel zooms the view.
+$ ./run-experiment.sh
