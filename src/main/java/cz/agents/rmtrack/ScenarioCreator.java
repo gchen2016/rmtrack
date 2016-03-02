@@ -223,7 +223,7 @@ public class ScenarioCreator {
             VisManager.unregisterLayers();
         }
 
-        //System.exit(0);
+        System.exit(0);
     } 
 	
 	private static void solveORCA(final EarliestArrivalProblem problem, final Parameters params) {
@@ -262,7 +262,7 @@ public class ScenarioCreator {
             VisManager.unregisterLayers();
         }
 
-        //System.exit(0);
+        System.exit(0);
     }
 
     private static void simulate(final EarliestArrivalProblem problem, List<Agent> agents, final Parameters params) {
@@ -299,11 +299,11 @@ public class ScenarioCreator {
             public float getSpeed() { return simControl.simSpeed; }
         }));
 
-        try {
-            System.in.read();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            System.in.read();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
 
         while (!allDone(agents) && simControl.simulatedTimeMs < SIMULATE_UNTIL){
             if (simControl.running == true) {
