@@ -73,14 +73,13 @@ public class TrackingAgent extends Agent {
             if (proceed) {
                 planPos += deltaT;
 
-                Point oldPos = traj.get(planPos).toPoint2d();
-                Point newPos = traj.get(planPos+deltaT).toPoint2d();
-
-                // print current velocity
-                Vector vel = new Vector(newPos);
-                vel.sub(oldPos);
-
-                LOGGER.debug(id + ": velocity " + (vel.length() / deltaT));
+//                Point oldPos = traj.get(planPos).toPoint2d();
+//                Point newPos = traj.get(planPos+deltaT).toPoint2d();
+//
+//                // print current velocity
+//                Vector vel = new Vector(newPos);
+//                vel.sub(oldPos);
+//                LOGGER.debug(id + ": velocity " + (vel.length() / deltaT));
                 
             }
         }

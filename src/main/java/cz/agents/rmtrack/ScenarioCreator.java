@@ -1,6 +1,7 @@
 package cz.agents.rmtrack;
 import cz.agents.alite.simulation.vis.SimulationControlLayer;
 import cz.agents.alite.vis.VisManager;
+import cz.agents.alite.vis.layer.terminal.textBackgroundLayer.TextBackgroundLayer;
 import cz.agents.alite.vis.layer.toggle.KeyToggleLayer;
 import cz.agents.rmtrack.agent.Agent;
 import cz.agents.rmtrack.agent.ORCAAgent;
@@ -24,6 +25,7 @@ import java.awt.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -47,7 +49,6 @@ public class ScenarioCreator {
 
     ///////////////////////////////////////////////////////////////////////
     
-    static long simulationStartedAt;
     static Logger LOGGER = Logger.getLogger(ScenarioCreator.class);
 
     enum Method {
@@ -61,7 +62,6 @@ public class ScenarioCreator {
     private static EarliestArrivalProblem problem;
 
     public static void createFromArgs(String[] args) {
-    	simulationStartedAt = System.currentTimeMillis();
     	Parameters params = new Parameters();
     	 	
     	String xml = Args.getArgumentValue(args, "-problemfile", true);
@@ -223,7 +223,7 @@ public class ScenarioCreator {
             VisManager.unregisterLayers();
         }
 
-        System.exit(0);
+        //System.exit(0);
     } 
 	
 	private static void solveORCA(final EarliestArrivalProblem problem, final Parameters params) {
@@ -250,7 +250,7 @@ public class ScenarioCreator {
                                 problem.getMaxSpeed(i),
                                 disturbance,
                                 new Random(params.disturbanceSeed),
-                                params.showVis ));
+                                false/*params.showVis*/ ));
             }
 
             // simulate execution
@@ -262,12 +262,11 @@ public class ScenarioCreator {
             VisManager.unregisterLayers();
         }
 
-        System.exit(0);
+        //System.exit(0);
     }
 
     private static void simulate(final EarliestArrivalProblem problem, List<Agent> agents, final Parameters params) {
     	
-    	simulationStartedAt = System.currentTimeMillis();
         initAgentVisualization(agents, params.timeStep);
 
         int SIMULATION_STEP_MS = 100;
@@ -299,6 +298,12 @@ public class ScenarioCreator {
             @Override
             public float getSpeed() { return simControl.simSpeed; }
         }));
+
+        try {
+            System.in.read();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         while (!allDone(agents) && simControl.simulatedTimeMs < SIMULATE_UNTIL){
             if (simControl.running == true) {
@@ -384,17 +389,12 @@ public class ScenarioCreator {
 
         long n = agents.size();
 
-//        long avgBaseTime = avg(spSum, n);
-//        long avgLbTime = avg(lbSum, n);
-//        long avgTravelTime = avg(travelTimeSum, n);
-
         Status status;
         if (allDone(agents)) {
             status = Status.SUCCESS;
         } else {
             status = Status.FAIL;
         }
-
 
         // status;dprob;dquant;dseed;spSum;d0Sum;lbSum;travelTimeSum;travelTimeSumSq;prolongSpSum;prolongSpSumSq;prolongD0Sum;prolongD0SumSq;prolongLBSum;prolongLBSumSq;makespanAbs;makespanSPProlong;makespanD0Prolong;makespanLBProlong
 
@@ -434,8 +434,28 @@ public class ScenarioCreator {
     }
 
 	private static void initAgentVisualization(final List<Agent> agents, int timeStep) {
+        // goals
+        VisManager.registerLayer(
+                KeyToggleLayer.create("g", true,
+                        LabeledCircleLayer.create(new LabeledCircleLayer.LabeledCircleProvider<tt.euclid2d.Point>() {
 
-		
+                            @Override
+                            public Collection<LabeledCircleLayer.LabeledCircle<tt.euclid2d.Point>> getLabeledCircles() {
+                                LinkedList<LabeledCircleLayer.LabeledCircle<tt.euclid2d.Point>> list = new LinkedList<LabeledCircleLayer.LabeledCircle<tt.euclid2d.Point>>();
+                                for (int i = 0; i < agents.size(); i++) {
+                                    tt.euclid2d.Point pos = agents.get(i).getGoal();
+
+                                    list.add(new LabeledCircleLayer.LabeledCircle<tt.euclid2d.Point>(pos,
+                                            (int) agents.get(i).getRadius(), ""  , AgentColors.getColorForAgent(i).brighter(),
+                                            null,
+                                            null));
+                                }
+
+                                return list;
+                            }
+
+                        }, new tt.euclid2d.vis.ProjectionTo2d())));
+
         // positions
         VisManager.registerLayer(
         	KeyToggleLayer.create("b", true, 
@@ -447,23 +467,31 @@ public class ScenarioCreator {
                  for (int i = 0; i < agents.size(); i++) {
                      tt.euclid2d.Point pos = agents.get(i).getPosition();
 
-                     Color fillColor = AgentColors.getColorForAgent(i);
-                     if (agents.get(i).wasDisturbed()) {
-                         fillColor = Color.black;
-                     }
 
-                     Color textColor = Color.BLUE;
+
+                     Color textColor = Color.WHITE;
+                     Color fillColor = AgentColors.getColorForAgent(i);
 
                      if (agents.get(i) instanceof TrackingAgent) {
                          TrackingAgent agent = (TrackingAgent) agents.get(i);
                          if (agent.isCurrentlyWaiting()) {
-                             textColor = Color.RED;
+                             fillColor = Color.LIGHT_GRAY;
                          }
+                     }
+
+                     if (agents.get(i).wasDisturbed()) {
+                         fillColor = Color.black;
+                     }
+
+                     String text = ""; //+ i;
+
+                     if (agents.get(i).isAtGoal()) {
+                         text = String.format("%.0fs", (double) agents.get(i).travelTime / 1000.0);
                      }
 
                 	 list.add(new LabeledCircleLayer.LabeledCircle<tt.euclid2d.Point>(pos,
                              (int) agents.get(i).getRadius(),
-                             "" + i + " " + String.format("%.2f", (double) agents.get(i).travelTime / 1000.0),
+                             text,
                              AgentColors.getColorForAgent(i),
                              fillColor ,
                              textColor));
@@ -474,10 +502,9 @@ public class ScenarioCreator {
 
          }, new tt.euclid2d.vis.ProjectionTo2d())));
 
-
         // planned positions
         VisManager.registerLayer(
-                KeyToggleLayer.create("x", true,
+                KeyToggleLayer.create("x", false,
                         LabeledCircleLayer.create(new LabeledCircleLayer.LabeledCircleProvider<tt.euclid2d.Point>() {
 
                             @Override
@@ -487,7 +514,7 @@ public class ScenarioCreator {
                                     tt.euclid2d.Point pos = agents.get(i).getPlannedPosition();
 
                                     list.add(new LabeledCircleLayer.LabeledCircle<tt.euclid2d.Point>(pos,
-                                            (int) agents.get(i).getRadius(), "" + i  , AgentColors.getColorForAgent(i),
+                                            (int) agents.get(i).getRadius(), ""  , AgentColors.getColorForAgent(i),
                                             null ,
                                             Color.DARK_GRAY));
                                 }
@@ -496,6 +523,7 @@ public class ScenarioCreator {
                             }
 
                         }, new tt.euclid2d.vis.ProjectionTo2d())));
+
  	}
 
     enum Status {SUCCESS, FAIL, TIMEOUT}
