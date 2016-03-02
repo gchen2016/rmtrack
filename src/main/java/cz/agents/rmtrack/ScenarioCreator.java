@@ -53,8 +53,9 @@ public class ScenarioCreator {
     enum Method {
         ALLSTOP,
         RMTRACK,
-        ORCA,
-        ORCASP}
+        ORCA_T,
+        ORCA
+    }
 
 
     private static EarliestArrivalProblem problem;
@@ -121,12 +122,12 @@ public class ScenarioCreator {
         switch (method) {
             case ALLSTOP:
             case RMTRACK:
-            case ORCA:
+            case ORCA_T:
                 solveTracking(problem, method, params);
                 break;
 
 
-            case ORCASP:
+            case ORCA:
                 solveORCA(problem, params);
                 break;
 
@@ -200,7 +201,7 @@ public class ScenarioCreator {
                                 TrackingAgent.TrackingMethod.RMTRACK);
                         break;
 
-                    case ORCA:
+                    case ORCA_T:
                         agent = new ORCAAgent(i,
                                 problem.getStart(i).toPoint2d(),
                                 problem.getTarget(i).toPoint2d(),
