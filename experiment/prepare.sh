@@ -13,7 +13,7 @@ function generate_instance_set {
     echo "Preparing instanceset $instancefolder. Will use timestep $timestep."
 
     mkdir -p $instancefolder
-    rm $instancefolder/*
+    rm $instancefolder/* 2> /dev/null
     cp prepare.sh $instancefolder/
 
     instance=0

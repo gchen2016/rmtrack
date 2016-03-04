@@ -3,9 +3,14 @@
 # clean temporary files and previous results
 echo -e "\n >>>> Cleaning\n"
 mvn clean -q
-rm -f experiment/instances/empty-hall-r25/*.out.*
-rm -f experiment/instances/ubremen-r27/*.out.*
-rm -f experiment/instances/warehouse-r25/*.out.*
+
+mkdir experiment/instances/empty-hall-r25 2> /dev/null
+mkdir experiment/instances/ubremen-r27 2> /dev/null
+mkdir experiment/instances/warehouse-r25 2> /dev/null
+
+rm -f experiment/instances/empty-hall-r25/*
+rm -f experiment/instances/ubremen-r27/*
+rm -f experiment/instances/warehouse-r25/*
 rm -rf experiment/plots
 rm -f expermient/solver.jar
 
